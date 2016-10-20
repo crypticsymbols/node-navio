@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "gypfile": true,
   "main": "index.js",
+  "scripts":{"preinstall": "if test \"$NODE_ENV\" = \"production\" ; then node-gyp rebuild ; fi "},
   "dependencies": {
     "bindings": "~1.2.1"
   }
