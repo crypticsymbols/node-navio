@@ -1,7 +1,5 @@
 {
-  "targets": [
-    {}
-  ],
+  "targets": [],
   'conditions': [
     ['OS=="linux"', {
       'targets': [
