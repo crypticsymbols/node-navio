@@ -1,6 +1,7 @@
 {
   "name": "node-navio",
   "version": "0.0.1",
+  "os": "linux",
   "gypfile": true,
   "main": "index.js",
   "dependencies": {
