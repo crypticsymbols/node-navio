@@ -1,0 +1,8 @@
+{
+  "name": "node-navio",
+  "gypfile": true,
+  "main": "index.js",
+  "dependencies": {
+    "bindings": "~1.2.1"
+  }
+}
