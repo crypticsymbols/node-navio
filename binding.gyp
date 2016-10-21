@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'library_dir': [
-              '-Wl,-rpath,$ORIGIN'
+              '-Wl,-rpath,./build/Release'
             ]
           }
         },
