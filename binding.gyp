@@ -24,6 +24,21 @@
         {
           "target_name": "navio",
           'type': 'shared_library',
+          # 
+          # 
+          # 
+          'direct_dependent_settings': {
+            'include_dirs': ['.'],  # dependents need to find cruncher.h.
+            'link_settings': {
+              'libraries': [
+                '-L.',
+                '-lnavio'
+              ],  # cruncher.cc does math.
+            },
+          },
+          # 
+          # 
+          # 
           "sources": [
             "src/Navio/MPU9250.cpp",
             "src/Navio/MB85RC04.cpp",
