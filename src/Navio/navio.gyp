@@ -20,7 +20,7 @@
         # },
         {
           "target_name": "navio",
-          # 'type': 'shared_library',
+          'type': 'shared_library',
           'include_dirs': [
             './',
           ],
