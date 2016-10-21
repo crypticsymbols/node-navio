@@ -17,7 +17,7 @@
           ],
           'libraries': [
             '-Wl,-rpath,./build/Release'
-          ]
+          ],
           'link_settings': {
             'libraries': [
               '-Wl,-rpath,./build/Release'
