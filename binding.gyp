@@ -20,7 +20,7 @@
           ],
           'link_settings': {
             'libraries': [
-              '-Wl,-rpath,./build/Release/vvvvvvvvnavio.so'
+              '-Wl,-rpath,./build/Release/vvvvvvvvnavio'
             ],
             'library_dirs': [
               '-Wl,-rpath,./build/Release'
