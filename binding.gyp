@@ -5,7 +5,6 @@
       'targets': [
         {
           "target_name": "pwm",
-          'type': '<(library)',
           "sources": [ 
             "src/pwm/pwm_wrapper.cc", 
             "src/pwm/pwm.cc" 
@@ -16,15 +15,15 @@
           'include_dirs': [
             'src/Navio',
           ],
-          # 'link_settings': {
-          #   'libraries': [
-          #     '/home/pi/daedalus/node_modules/node-navio/build/Release'
-          #   ]
-          # }
+          'link_settings': {
+            'libraries': [
+              './navio.so'
+            ]
+          }
         },
         {
           "target_name": "navio",
-          'type': '<(library)',
+          'type': 'shared_library',
           "sources": [
             "src/Navio/MPU9250.cpp",
             "src/Navio/MB85RC04.cpp",
