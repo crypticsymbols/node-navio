@@ -25,16 +25,16 @@
             './',
           ],
           "sources": [
-            "src/Navio/MPU9250.cpp",
-            "src/Navio/MB85RC04.cpp",
-            "src/Navio/gpio.cpp",
-            "src/Navio/ADS1115.cpp",
-            "src/Navio/MS5611.cpp",
-            "src/Navio/Ublox.cpp",
-            "src/Navio/MB85RC256.cpp",
-            "src/Navio/I2Cdev.cpp",
-            "src/Navio/PCA9685.cpp",
-            "src/Navio/Util.cpp"
+            "MPU9250.cpp",
+            "MB85RC04.cpp",
+            "gpio.cpp",
+            "ADS1115.cpp",
+            "MS5611.cpp",
+            "Ublox.cpp",
+            "MB85RC256.cpp",
+            "I2Cdev.cpp",
+            "PCA9685.cpp",
+            "Util.cpp"
           ]
         }
       ]
