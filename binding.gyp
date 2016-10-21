@@ -10,25 +10,19 @@
             "src/pwm/pwm.cc" 
           ],
           "dependencies" : [
-            'vvvvvvvvnavio'
+            'libnavio'
           ],
           'include_dirs': [
             'src/Navio',
           ],
-          'library_dirs': [
-            '-Wl,-rpath,./build/Release'
-          ],
-          'libraries': [
-            'vvvvvvvvnavio'
-          ],
           'link_settings': {
-            'library_dirs': [
+            'libraries': [
               '-Wl,-rpath,./build/Release'
             ]
           }
         },
         {
-          "target_name": "vvvvvvvvnavio",
+          "target_name": "libnavio",
           'type': 'shared_library',
           "sources": [
             "src/Navio/MPU9250.cpp",
