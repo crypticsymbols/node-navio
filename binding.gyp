@@ -16,7 +16,7 @@
             'src/Navio',
           ],
           'link_settings': {
-            'libraries': [
+            'library_dir': [
               '-Wl,-rpath,$ORIGIN'
             ]
           }
