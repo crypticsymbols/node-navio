@@ -19,7 +19,7 @@
             '-Wl,-rpath,./build/Release'
           ],
           'link_settings': {
-            'libraries': [
+            'library_dirs': [
               '-Wl,-rpath,./build/Release'
             ]
           }
