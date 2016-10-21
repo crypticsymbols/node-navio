@@ -10,33 +10,33 @@
             "src/pwm/pwm.cc" 
           ],
           "dependencies" : [
-            './src/Navio/navio.gyp:navio'
+            'navio'
           ],
           'include_dirs': [
             'src/Navio',
           ],
-          # 'link_settings': {
-          #   'libraries': [
-          #     "-Wl,-rpath=$ORIGIN,-rpath-link=<(PRODUCT_DIR),./navio.so"
-          #   ]
-          # }
+          'link_settings': {
+            'libraries': [
+              "-Wl,-rpath=$ORIGIN,./R$(echo pwd)e/navio.so"
+            ]
+          }
         },
-        # {
-        #   "target_name": "navio",
-        #   # 'type': 'shared_library',
-        #   "sources": [
-        #     "src/Navio/MPU9250.cpp",
-        #     "src/Navio/MB85RC04.cpp",
-        #     "src/Navio/gpio.cpp",
-        #     "src/Navio/ADS1115.cpp",
-        #     "src/Navio/MS5611.cpp",
-        #     "src/Navio/Ublox.cpp",
-        #     "src/Navio/MB85RC256.cpp",
-        #     "src/Navio/I2Cdev.cpp",
-        #     "src/Navio/PCA9685.cpp",
-        #     "src/Navio/Util.cpp"
-        #   ]
-        # }
+        {
+          "target_name": "navio",
+          'type': 'shared_library',
+          "sources": [
+            "src/Navio/MPU9250.cpp",
+            "src/Navio/MB85RC04.cpp",
+            "src/Navio/gpio.cpp",
+            "src/Navio/ADS1115.cpp",
+            "src/Navio/MS5611.cpp",
+            "src/Navio/Ublox.cpp",
+            "src/Navio/MB85RC256.cpp",
+            "src/Navio/I2Cdev.cpp",
+            "src/Navio/PCA9685.cpp",
+            "src/Navio/Util.cpp"
+          ]
+        }
       ]
     }]
   ]
