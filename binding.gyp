@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'libraries': [
-              '/home/pi/daedalus/node_modules/build/Release'
+              '/home/pi/daedalus/node_modules/node-navio/build/Release'
             ]
           }
         },
