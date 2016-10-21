@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'libraries': [
-              './build/Release'
+              'build/Release'
             ]
           }
         },
