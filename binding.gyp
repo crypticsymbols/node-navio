@@ -15,14 +15,14 @@
           'include_dirs': [
             'src/Navio',
           ],
-          'libraries': [
-            '-Wl,-rpath,./build/Release'
-          ],
-          'link_settings': {
-            'libraries': [
-              '-Wl,-rpath,./build/Release'
-            ]
-          }
+          # 'libraries': [
+          #   '-Wl,-rpath,./build/Release'
+          # ],
+          # 'link_settings': {
+          #   'libraries': [
+          #     '-Wl,-rpath,./build/Release'
+          #   ]
+          # }
         },
         {
           "target_name": "libnavio",
