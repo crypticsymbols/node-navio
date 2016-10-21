@@ -5,6 +5,7 @@
       'targets': [
         {
           "target_name": "pwm",
+          'type': '<(library)',
           "sources": [ 
             "src/pwm/pwm_wrapper.cc", 
             "src/pwm/pwm.cc" 
