@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'libraries': [
-              "-Wl,-rpath=$ORIGIN,../navio.so"
+              "-Wl,-rpath=$ORIGIN,Release/navio.so"
             ]
           }
         },
