@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'libraries': [
-              '-Wl,-rpath=$ORIGIN,./navio.so'
+              '/home/pi/daedalus/node_modules/build/Release'
             ]
           }
         },
