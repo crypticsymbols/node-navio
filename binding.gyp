@@ -10,7 +10,7 @@
             "src/pwm/pwm.cc" 
           ],
           "dependencies" : [
-            'libnavio'
+            'zlibnavio'
           ],
           'include_dirs': [
             'src/Navio',
@@ -22,7 +22,7 @@
           }
         },
         {
-          "target_name": "libnavio",
+          "target_name": "zlibnavio",
           'type': 'shared_library',
           "sources": [
             "src/Navio/MPU9250.cpp",
