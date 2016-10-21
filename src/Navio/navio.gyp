@@ -22,7 +22,7 @@
           "target_name": "navio",
           # 'type': 'shared_library',
           'include_dirs': [
-            'src/Navio',
+            './',
           ],
           "sources": [
             "src/Navio/MPU9250.cpp",
