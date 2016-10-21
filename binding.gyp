@@ -31,7 +31,7 @@
             'include_dirs': ['.'],  # dependents need to find cruncher.h.
             'link_settings': {
               'libraries': [
-                "-WL,-rpath=$$ORIGIN,./build/Release",
+                "-WL,-rpath=\$ORIGIN,./build/Release",
               ],  # cruncher.cc does math.
             },
           },
