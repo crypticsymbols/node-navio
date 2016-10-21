@@ -15,15 +15,15 @@
           'include_dirs': [
             'src/Navio',
           ],
-          'link_settings': {
-            'libraries': [
-              '/home/pi/daedalus/node_modules/node-navio/build/Release'
-            ]
-          }
+          # 'link_settings': {
+          #   'libraries': [
+          #     '/home/pi/daedalus/node_modules/node-navio/build/Release'
+          #   ]
+          # }
         },
         {
           "target_name": "navio",
-          'type': 'shared_library',
+          'type': '<(library)',
           "sources": [
             "src/Navio/MPU9250.cpp",
             "src/Navio/MB85RC04.cpp",
