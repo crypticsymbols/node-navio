@@ -15,9 +15,9 @@
           'include_dirs': [
             'src/Navio',
           ],
-          # 'libraries': [
-          #   '-Wl,-rpath,./build/Release'
-          # ],
+          'library_dirs': [
+            '-Wl,-rpath,./build/Release'
+          ],
           # 'link_settings': {
           #   'libraries': [
           #     '-Wl,-rpath,./build/Release'
