@@ -9,18 +9,20 @@
             "src/pwm/pwm_wrapper.cc", 
             "src/pwm/pwm.cc" 
           ],
-          "dependencies" : ['libnavio'],
+          "dependencies" : [
+            'libnavio'
+          ],
           'include_dirs': [
             'src/Navio',
           ],
+          'libraries': [
+            '-Wl,-rpath,./build/Release'
+          ]
           'link_settings': {
             'libraries': [
               '-Wl,-rpath,./build/Release'
             ]
-          },
-          'export_dependent_settings': [
-            'libnavio'
-          ],
+          }
         },
         {
           "target_name": "libnavio",
