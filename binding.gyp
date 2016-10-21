@@ -20,7 +20,7 @@
               # '-Wl,-rpath,$ORIGIN./Release'
               # '-Wl,-rpath,$ORIGIN/Release'
               # '-Wl,-rpath=$ORIGIN/Release'
-              '-Wl,-rpath=$ORIGIN,navio.so'
+              '-Wl,-rpath=$ORIGIN,./build/Release/navio.so'
             ]
           }
         },
