@@ -16,7 +16,7 @@
             'src/Navio',
           ],
           'link_settings': {
-            'libraries': ['-L./Release', '-lnavio']
+            'libraries': ['-L./build/Release']
             # 'libraries': [
             #   # '-Wl,-rpath,$ORIGIN./Release'
             #   # '-Wl,-rpath,$ORIGIN/Release'
