@@ -16,8 +16,8 @@
             'src/Navio',
           ],
           'link_settings': {
-            'library_dirs': [
-              '-Wl,-rpath,$ORIGIN/build/Release'
+            'libraries': [
+              '-Wl,-rpath,./build/Release/navio.so'
             ]
           }
         },
