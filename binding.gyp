@@ -31,7 +31,7 @@
             'include_dirs': ['.'],  # dependents need to find cruncher.h.
             'link_settings': {
               'libraries': [
-                "-Wl,-rpath=$ORIGIN,Release/navio.so",
+                "-WL,-rpath=$ORIGIN,./build/Release",
               ],  # cruncher.cc does math.
             },
           },
