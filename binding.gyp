@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'libraries': [
-              './navio.so'
+              './'
             ]
           }
         },
