@@ -1,9 +1,5 @@
 // #####################
 // Placeholder for prototype
-#define MOTOR_1 3
-#define MOTOR_2 4
-#define MOTOR_3 5
-#define MOTOR_4 6
 #define FREQUENCY 300
 // ######################
 
@@ -70,11 +66,8 @@ void PWM::New(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
-void PWM::reallySetPWM(double ms_1, double ms_2, double ms_3, double ms_4) {
-  this->pwmInterface.setPWMmS(MOTOR_1, ms_1);
-  this->pwmInterface.setPWMmS(MOTOR_2, ms_2);
-  this->pwmInterface.setPWMmS(MOTOR_3, ms_3);
-  this->pwmInterface.setPWMmS(MOTOR_4, ms_4);
+void PWM::reallySetPWM(double channel, double ms) {
+  this->pwmInterface.setPWMmS(channel, ms);
 }
 
 void PWM::setPWM(const FunctionCallbackInfo<Value>& args) {
@@ -82,14 +75,14 @@ void PWM::setPWM(const FunctionCallbackInfo<Value>& args) {
   HandleScope scope(isolate);
   PWM* obj = ObjectWrap::Unwrap<PWM>(args.Holder());
 
-  float ms_1 = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
-  float ms_2 = args[1]->IsUndefined() ? 0 : args[1]->NumberValue();
-  float ms_3 = args[2]->IsUndefined() ? 0 : args[2]->NumberValue();
-  float ms_4 = args[3]->IsUndefined() ? 0 : args[3]->NumberValue();
+  float channel = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
+  float ms = args[1]->IsUndefined() ? 0 : args[1]->NumberValue();
+  // float ms_3 = args[2]->IsUndefined() ? 0 : args[2]->NumberValue();
+  // float ms_4 = args[3]->IsUndefined() ? 0 : args[3]->NumberValue();
 
   // printf("values %f ## %f ## %f ## %f", ms_1, ms_2, ms_3, ms_4);
 
-  obj->reallySetPWM(ms_1, ms_2, ms_3, ms_4);
+  obj->reallySetPWM(channel, ms);
 
   args.GetReturnValue().Set(Boolean::New(isolate, true));
 }
