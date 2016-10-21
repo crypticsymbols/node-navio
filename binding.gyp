@@ -16,12 +16,13 @@
             'src/Navio',
           ],
           'link_settings': {
-            'libraries': [
-              # '-Wl,-rpath,$ORIGIN./Release'
-              # '-Wl,-rpath,$ORIGIN/Release'
-              # '-Wl,-rpath=$ORIGIN/Release'
-              '-Wl,-rpath=$ORIGIN,./build/Release/navio.so'
-            ]
+            'libraries': ['-L./Release', '-lnavio']
+            # 'libraries': [
+            #   # '-Wl,-rpath,$ORIGIN./Release'
+            #   # '-Wl,-rpath,$ORIGIN/Release'
+            #   # '-Wl,-rpath=$ORIGIN/Release'
+            #   '-Wl,-rpath=$ORIGIN,./build/Release/navio.so'
+            # ]
           }
         },
         {
