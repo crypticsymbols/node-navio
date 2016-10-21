@@ -15,11 +15,11 @@
           'include_dirs': [
             'src/Navio',
           ],
-          'link_settings': {
-            'libraries': [
-              "-Wl,-rpath=$ORIGIN,Release/navio.so"
-            ]
-          }
+          # 'link_settings': {
+          #   'libraries': [
+          #     "-Wl,-rpath=$ORIGIN,Release/navio.so"
+          #   ]
+          # }
         },
         {
           "target_name": "navio",
@@ -31,8 +31,7 @@
             'include_dirs': ['.'],  # dependents need to find cruncher.h.
             'link_settings': {
               'libraries': [
-                '-L.',
-                '-lnavio'
+                "-Wl,-rpath=$ORIGIN,Release/navio.so",
               ],  # cruncher.cc does math.
             },
           },
