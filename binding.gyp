@@ -18,10 +18,10 @@
           'library_dirs': [
             '-Wl,-rpath,./build/Release'
           ],
+          'libraries': [
+            '-Wl,-rpath,./build/Release/vvvvvvvvnavio'
+          ],
           'link_settings': {
-            'libraries': [
-              '-Wl,-rpath,./build/Release/vvvvvvvvnavio'
-            ],
             'library_dirs': [
               '-Wl,-rpath,./build/Release'
             ]
