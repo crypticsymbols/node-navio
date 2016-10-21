@@ -12,9 +12,7 @@
           "dependencies" : [
             'navio'
           ],
-          'include_dirs': [
-            'src/Navio',
-          ],
+          
           # 'link_settings': {
           #   'libraries': [
           #     "-Wl,-rpath=$ORIGIN,Release/navio.so"
@@ -28,7 +26,9 @@
           # 
           # 
           'direct_dependent_settings': {
-            # 'include_dirs': ['.'],  # dependents need to find cruncher.h.
+            'include_dirs': [
+              'src/Navio',
+            ],
             'link_settings': {
               'libraries': [
                 '-Wl,-rpath=\$$ORIGIN',
