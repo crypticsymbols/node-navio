@@ -28,10 +28,11 @@
           # 
           # 
           'direct_dependent_settings': {
-            'include_dirs': ['.'],  # dependents need to find cruncher.h.
+            # 'include_dirs': ['.'],  # dependents need to find cruncher.h.
             'link_settings': {
               'libraries': [
-                "-WL,-rpath=\\$ORIGIN,./build/Release",
+                '-Wl,-rpath=\$$ORIGIN,
+                '-Wl,-rpath-link=\$(builddir)'
               ],  # cruncher.cc does math.
             },
           },
