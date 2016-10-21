@@ -10,7 +10,7 @@
             "src/pwm/pwm.cc" 
           ],
           "dependencies" : [
-            './Navio/navio.gyp:navio'
+            './src/Navio/navio.gyp:navio'
           ],
           'include_dirs': [
             'src/Navio',
