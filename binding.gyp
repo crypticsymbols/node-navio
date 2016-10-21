@@ -5,7 +5,6 @@
       'targets': [
         {
           "target_name": "pwm",
-          'type': 'static_library',
           "sources": [ 
             "src/pwm/pwm_wrapper.cc", 
             "src/pwm/pwm.cc" 
