@@ -17,7 +17,7 @@
           ],
           'link_settings': {
             'libraries': [
-              '-Wl,-rpath,./Release'
+              '-Wl,-rpath,$ORIGIN,./Release'
             ]
           }
         },
