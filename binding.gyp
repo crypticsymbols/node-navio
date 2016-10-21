@@ -16,13 +16,9 @@
             'src/Navio',
           ],
           'link_settings': {
-            'libraries': ['-L./build/Release']
-            # 'libraries': [
-            #   # '-Wl,-rpath,$ORIGIN./Release'
-            #   # '-Wl,-rpath,$ORIGIN/Release'
-            #   # '-Wl,-rpath=$ORIGIN/Release'
-            #   '-Wl,-rpath=$ORIGIN,./build/Release/navio.so'
-            # ]
+            'libraries': [
+              '-Wl,-rpath,./build/Release'
+            ]
           }
         },
         {
