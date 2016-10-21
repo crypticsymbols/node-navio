@@ -15,17 +15,17 @@
           'include_dirs': [
             'src/Navio',
           ],
-          'link_settings': {
-            'libraries': [
-              '-L./'
-              '-lnavio.so'
-              '-Wl,-rpath=$ORIGIN,navio.so'
-            ]
-          }
+          # 'link_settings': {
+          #   'libraries': [
+          #     '-L./'
+          #     '-lnavio.so'
+          #     '-Wl,-rpath=$ORIGIN,navio.so'
+          #   ]
+          # }
         },
         {
           "target_name": "navio",
-          'type': 'shared_library',
+          'type': 'static_library',
           "sources": [
             "src/Navio/MPU9250.cpp",
             "src/Navio/MB85RC04.cpp",
