@@ -1,6 +1,6 @@
 // #####################
 // Placeholder for prototype
-#define FREQUENCY 300
+#define FREQUENCY 50
 // ######################
 
 #include "pwm.h"
@@ -67,7 +67,7 @@ void PWM::New(const FunctionCallbackInfo<Value>& args) {
 }
 
 void PWM::reallySetPWM(double channel, double ms) {
-  this->pwmInterface.setPWMmS(channel, ms);
+  this->pwmInterface.setPWMuS(channel, ms);
 }
 
 void PWM::setPWM(const FunctionCallbackInfo<Value>& args) {
