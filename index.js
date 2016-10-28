@@ -10,8 +10,8 @@ module.exports = {
       return new bindings('pwm.node').PWM();
     } catch(e){
       return {
-        setPWM: function(){
-          console.log('not on OSX :)')
+        setPWM: function(channel, uS){
+          console.log('PWM Command: Channel '+channel+' set to '+uS+'uS')
         }
       }
     }
