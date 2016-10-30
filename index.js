@@ -17,7 +17,7 @@ module.exports = {
     }
   },
 
-  imu: function(){
+  imuReader: function(){
     try {
       return new bindings('imu.node').IMU();
     } catch(e){
