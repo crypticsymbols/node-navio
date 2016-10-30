@@ -23,7 +23,7 @@ module.exports = {
     } catch(e){
       return {
         getIMU: function(){
-          console.log('If this were a Navio, I would be getting IMU data.')
+          return 'If this were a Navio, I would be getting IMU data.'
         }
       }
     }
