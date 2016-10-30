@@ -8,19 +8,9 @@ using namespace v8;
 Persistent<Function> IMU::constructor;
 
 IMU::IMU() {
-  // static const uint8_t outputEnablePin = RPI_GPIO_27;
-  // Pin pin(outputEnablePin);
-  // if (pin.init()) {
-  //     pin.setMode(Pin::GpioModeOutput);
-  //     pin.write(0);  drive Output Enable low 
-  // } else {
-  //     fprintf(stderr, "Output Enable not set. Are you root?\n");
-  // }
   MPU9250 imuDevice;
   this->imu = imuDevice;
   imu.initialize();
-  // IMU.setFrequency(FREQUENCY);
-  // this->IMUInterface = IMU;
 }
 
 IMU::~IMU() {
@@ -61,8 +51,7 @@ void IMU::New(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
-float IMU::getCurrentData() {
-  float ax, ay, az, gx, gy, gz, mx, my, mz;
+void IMU::getCurrentData() {
   this->imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
   printf("Acc: %+7.3f %+7.3f %+7.3f  ", ax, ay, az);
   printf("Gyr: %+8.3f %+8.3f %+8.3f  ", gx, gy, gz);
@@ -79,14 +68,14 @@ void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
   // float ms = args[1]->IsUndefined() ? 0 : args[1]->NumberValue();
   // float ms_3 = args[2]->IsUndefined() ? 0 : args[2]->NumberValue();
   // float ms_4 = args[3]->IsUndefined() ? 0 : args[3]->NumberValue();
+  obj->getCurrentData();
 
   Local<Object> ret = Object::New(isolate); 
-ret->Set(0, String::NewFromUtf8(isolate, "okay")); 
+  ret->Set(0, Number::New(isolate, obj->ax)); 
 
 // return scope.Close(ret); 
 
   // float derp;
-  // derp = obj->getCurrentData();
 
   args.GetReturnValue().Set(ret);
 }
