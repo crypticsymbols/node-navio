@@ -1,3 +1,4 @@
+#include "imu.h"
 #include <MPU9250.h>
 #include <Util.h>
 #include <stdlib.h>
