@@ -70,7 +70,9 @@ void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
   obj->getCurrentData();
 
   Local<Object> ret = Object::New(isolate); 
-  ret->Set(0, Number::New(isolate, obj->ax)); 
+  ret->Set('ax', Number::New(isolate, obj->ax)); 
+  ret->Set('ay', obj->ay); 
+  ret->Set('az', 0); 
 
 // return scope.Close(ret); 
 
