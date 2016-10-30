@@ -18,7 +18,7 @@ class IMU : public node::ObjectWrap {
   static void getIMU(const v8::FunctionCallbackInfo<v8::Value>& args);
   static v8::Persistent<v8::Function> constructor;
   MPU9250 imu;
-  void getCurrentData();
+  float getCurrentData();
 };
 
 #endif

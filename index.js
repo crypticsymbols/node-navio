@@ -15,7 +15,7 @@ module.exports = {
         }
       }
     }
-  }
+  },
 
   imu: function(){
     try {

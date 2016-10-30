@@ -61,12 +61,13 @@ void IMU::New(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
-void IMU::getCurrentData() {
+float IMU::getCurrentData() {
   float ax, ay, az, gx, gy, gz, mx, my, mz;
   this->imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
   printf("Acc: %+7.3f %+7.3f %+7.3f  ", ax, ay, az);
   printf("Gyr: %+8.3f %+8.3f %+8.3f  ", gx, gy, gz);
   printf("Mag: %+7.3f %+7.3f %+7.3f\n", mx, my, mz);
+  return mx;
 }
 
 void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
@@ -80,8 +81,8 @@ void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
   // float ms_4 = args[3]->IsUndefined() ? 0 : args[3]->NumberValue();
 
   // printf("values %f ## %f ## %f ## %f", ms_1, ms_2, ms_3, ms_4);
+  float derp;
+  derp = obj->getCurrentData();
 
-  obj->getCurrentData();
-
-  args.GetReturnValue().Set(Boolean::New(isolate, true));
+  args.GetReturnValue().Set(Number::New(isolate, derp));
 }
