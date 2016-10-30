@@ -81,7 +81,7 @@ void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
   // float ms_4 = args[3]->IsUndefined() ? 0 : args[3]->NumberValue();
 
   Local<Object> obje = Object::New();
-  obje->Set('string', false)
+  obje->Set('string', 'okay then')
   // Set stuff (see below)
   return scope.Close(obje);
 
