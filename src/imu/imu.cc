@@ -80,9 +80,13 @@ void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
   // float ms_3 = args[2]->IsUndefined() ? 0 : args[2]->NumberValue();
   // float ms_4 = args[3]->IsUndefined() ? 0 : args[3]->NumberValue();
 
-  // printf("values %f ## %f ## %f ## %f", ms_1, ms_2, ms_3, ms_4);
-  float derp;
-  derp = obj->getCurrentData();
+  Local<Object> obj = Object::New();
+  obj->Set('string', false)
+  // Set stuff (see below)
+  return scope.Close(obj);
 
-  args.GetReturnValue().Set(Number::New(isolate, derp));
+  // float derp;
+  // derp = obj->getCurrentData();
+
+  // args.GetReturnValue().Set(Number::New(isolate, derp));
 }
