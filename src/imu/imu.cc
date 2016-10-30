@@ -38,14 +38,11 @@ void IMU::New(const FunctionCallbackInfo<Value>& args) {
 
   if (args.IsConstructCall()) {
     // Invoked as constructor: `new IMU(...)`
-    // double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
     IMU* obj = new IMU();
     obj->Wrap(args.This());
     args.GetReturnValue().Set(args.This());
   } else {
     // Invoked as plain function `IMU(...)`, turn into construct call.
-    // const int argc = 1;
-    // Local<Value> argv[argc] = { args[0] };
     Local<Function> cons = Local<Function>::New(isolate, constructor);
     args.GetReturnValue().Set(cons->NewInstance());
   }
