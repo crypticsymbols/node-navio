@@ -56,7 +56,6 @@ void IMU::getCurrentData() {
   printf("Acc: %+7.3f %+7.3f %+7.3f  ", ax, ay, az);
   printf("Gyr: %+8.3f %+8.3f %+8.3f  ", gx, gy, gz);
   printf("Mag: %+7.3f %+7.3f %+7.3f\n", mx, my, mz);
-  return mx;
 }
 
 void IMU::getIMU(const FunctionCallbackInfo<Value>& args) {
