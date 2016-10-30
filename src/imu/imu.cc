@@ -1,5 +1,5 @@
-#include "Navio/MPU9250.h"
-#include "Navio/Util.h"
+#include <MPU9250.h>
+#include <Util.h>
 #include <stdlib.h>
 
 using namespace v8;
