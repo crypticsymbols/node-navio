@@ -16,4 +16,17 @@ module.exports = {
       }
     }
   }
+
+  imu: function(){
+    try {
+      return new bindings('imu.node').IMU();
+    } catch(e){
+      return {
+        getIMU: function(){
+          console.log('If this were a Navio, I would be getting IMU data.')
+        }
+      }
+    }
+  }
+
 }
