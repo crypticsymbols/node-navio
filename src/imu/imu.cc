@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 using namespace v8;
-using namespace Navio;
 
 Persistent<Function> IMU::constructor;
 
