@@ -17,7 +17,8 @@ IMU::IMU() {
   // } else {
   //     fprintf(stderr, "Output Enable not set. Are you root?\n");
   // }
-  this->imu = MPU9250 imu;
+  MPU9250 imuDevice;
+  this->imu = imuDevice;
   imu.initialize();
   // IMU.setFrequency(FREQUENCY);
   // this->IMUInterface = IMU;
