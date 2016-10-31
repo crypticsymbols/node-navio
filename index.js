@@ -1,15 +1,15 @@
-if (process.platform == 'linux' && process.env.NODE_ENV == 'production'){
+if (process.platform == 'linux'){
   // Is there a better way to target Raspberry Pi?
   var bindings = require('bindings');
-  var pwm = bindings('pwm.node')
-  var imu = bindings('imu.node')
+  var p = require('bindings')('pwm.node')
+  var i = require('bindings')('imu.node')
 }
 
 module.exports = {
 
   pwmController: function(){
     try {
-      return new pwm.PWM();
+      return new p.PWM();
     } catch(e){
       return {
         setPWM: function(channel, uS){
@@ -21,7 +21,7 @@ module.exports = {
 
   imuReader: function(){
     try {
-      return new imu.IMU();
+      return new i.IMU();
     } catch(e){
       return {
         getIMU: function(){
