@@ -25,7 +25,17 @@ module.exports = {
     } catch(e){
       return {
         getIMU: function(){
-          return 'If this were a Navio, I would be getting IMU data.'
+          return {
+            ax: 0,
+            ay: 0,
+            az: 0,
+            gx: 0,
+            gy: 0,
+            gz: 0,
+            mx: 0,
+            my: 0,
+            mz: 0,
+          }
         }
       }
     }
