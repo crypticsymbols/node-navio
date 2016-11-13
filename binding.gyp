@@ -5,7 +5,8 @@
       'type': 'none',
       'dependencies': [
         'src/pwm/pwm.gyp:*',
-        'src/imu/imu.gyp:*'
+        'src/imu/imu.gyp:*',
+        'src/imu/ahrs.gyp:*',
       ],
     }
   ]
