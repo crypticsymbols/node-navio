@@ -6,7 +6,7 @@
       'dependencies': [
         'src/pwm/pwm.gyp:*',
         'src/imu/imu.gyp:*',
-        'src/imu/ahrs.gyp:*',
+        'src/ahrs/ahrs.gyp:*',
       ],
     }
   ]
