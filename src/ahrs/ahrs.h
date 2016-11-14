@@ -37,6 +37,7 @@ class AHRS : public node::ObjectWrap {
     static v8::Persistent<v8::Function> constructor;
     void imuSetup();
     void imuLoop();
+    void spawnLoop();
 };
 
 #endif

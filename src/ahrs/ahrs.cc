@@ -34,6 +34,7 @@ chrt -f -p 99 PID
 #include <MPU9250.h>
 #include <Util.h>
 #include "mahony.hpp"
+#include <thread>
 
 #define G_SI 9.80665
 #define PI   3.14159
@@ -52,10 +53,14 @@ AHRS::AHRS () {
   isFirst = 1;
 
   imuSetup();
+
+  std::thread worker (spawnLoop)
+}
+
+void AHRS::spawnLoop () {
   while(1)
     imuLoop();
 }
-
 
 AHRS::~AHRS () {
 }
@@ -101,6 +106,8 @@ void AHRS::imuLoop(){
   dt = (currenttime - previoustime) / 1000000.0;
   //-------- Read raw measurements from the MPU and update AHRS --------------
   // Accel + gyro.
+  
+  printf("ax: %+05.2f ay: %+05.2f az: %+05.2f \n", ax, ay, az);
   imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
   ax /= G_SI;
   ay /= G_SI;
