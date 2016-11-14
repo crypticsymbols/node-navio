@@ -3,6 +3,7 @@ if (process.platform == 'linux'){
   var bindings = require('bindings');
   var p = require('bindings')('pwm.node')
   var i = require('bindings')('imu.node')
+  var a = require('bindings')('ahrs.node')
 }
 
 module.exports = {
@@ -17,6 +18,20 @@ module.exports = {
         }
       }
     }
+  },
+  
+  ahrsData: function(){
+    // try {
+      // return new i.IMU();
+    // } catch(e){
+      // return {
+        // getIMU: function(){
+          // return {
+            // ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, mx: 0, my: 0, mz: 0,
+          // }
+        // }
+      // }
+    // }
   },
 
   imuReader: function(){
