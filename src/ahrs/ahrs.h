@@ -7,7 +7,7 @@
 #include <MPU9250.h>
 #include "mahony.hpp"
 
-class IMU : public node::ObjectWrap {
+class AHRS : public node::ObjectWrap {
   public:
     static void Init(v8::Handle<v8::Object> exports);
     float ax;
@@ -28,8 +28,8 @@ class IMU : public node::ObjectWrap {
     float dtsumm;
     int isFirst;
   private:
-    explicit IMU();
-    ~IMU();
+    explicit AHRS();
+    ~AHRS();
     MPU9250 imu;
     MAHONY ahrs;
     static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
