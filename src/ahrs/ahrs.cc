@@ -43,7 +43,7 @@ using namespace v8;
 Persistent<Function> AHRS::constructor;
 
 AHRS::~AHRS () {
-  MPU9250 imuDevice;
+  MPU9250 imu;
   MAHONY ahrs;  
   mindt = 0.01;
   dtsumm = 0;
@@ -88,7 +88,7 @@ void AHRS::imuSetup(){
 //
 // AHRS update loop
 //
-void imuLoop(){
+void AHRS::imuLoop(){
   //----------------------- Calculate delta time ----------------------------
   gettimeofday(&tv,NULL);
   previoustime = currenttime;
