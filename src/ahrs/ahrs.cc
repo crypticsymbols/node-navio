@@ -35,8 +35,8 @@ chrt -f -p 99 PID
 #include <Util.h>
 #include "mahony.hpp"
 
-#define g_si 9.80665
-#define pi   3.14159
+#define G_SI 9.80665
+#define PI   3.14159
 
 using namespace v8;
 
