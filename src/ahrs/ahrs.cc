@@ -47,11 +47,11 @@ AHRS::~AHRS () {
   MAHONY ahrsD;
   this->imu = imuD;
   this->ahrs = ahrsD;
-  mindt = 0.01;
-  dtsumm = 0;
-  isFirst = 1;
+  // mindt = 0.01;
+  // dtsumm = 0;
+  // isFirst = 1;
 
-  imuSetup();
+  // imuSetup();
   // while(1)
     // imuLoop();
 }
