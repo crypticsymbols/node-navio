@@ -52,8 +52,8 @@ AHRS::~AHRS () {
   isFirst = 1;
 
   imuSetup();
-  while(1)
-    imuLoop();
+  // while(1)
+    // imuLoop();
 }
 //
 // AHRS/IMU setup
