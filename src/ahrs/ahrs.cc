@@ -48,9 +48,7 @@ AHRS::~AHRS () {
   mindt = 0.01;
   dtsumm = 0;
   isFirst = 1;
-  //
-  // do the thing
-  //
+
   imuSetup();
   while(1)
     imuLoop();
@@ -60,11 +58,8 @@ AHRS::~AHRS () {
 //
 void AHRS::imuSetup(){
   //----------------------- MPU initialization ------------------------------
-
   imu.initialize();
-
   //-------------------------------------------------------------------------
-
   printf("Beginning Gyro calibration...\n");
   for(int i = 0; i<100; i++)
   {
@@ -159,7 +154,7 @@ void AHRS::Init(Handle<Object> exports) {
   // Prepare constructor template
   Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
   tpl->SetClassName(String::NewFromUtf8(isolate, "AHRS"));
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+  tpl->InstanceTemplate()->SetInternalFieldCount(2);
   // Prototype
   NODE_SET_PROTOTYPE_METHOD(tpl, "getData", getData);
   constructor.Reset(isolate, tpl->GetFunction());
