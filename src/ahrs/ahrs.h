@@ -1,5 +1,5 @@
-#ifndef IMU_H
-#define IMU_H
+#ifndef AHRS_H
+#define AHRS_H
 
 #include <node.h>
 #include <node_object_wrap.h>
