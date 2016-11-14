@@ -170,15 +170,16 @@ void AHRS::getData(const FunctionCallbackInfo<Value>& args){
 
   // obj->getCurrentAHRSOutput();
 
-  ret->Set(String::NewFromUtf8(isolate, "ax"), Number::New(isolate, obj->ax));
-  ret->Set(String::NewFromUtf8(isolate, "ay"), Number::New(isolate, obj->ay));
-  ret->Set(String::NewFromUtf8(isolate, "az"), Number::New(isolate, obj->az));
-  ret->Set(String::NewFromUtf8(isolate, "gx"), Number::New(isolate, obj->gx));
-  ret->Set(String::NewFromUtf8(isolate, "gy"), Number::New(isolate, obj->gy));
-  ret->Set(String::NewFromUtf8(isolate, "gz"), Number::New(isolate, obj->gz));
-  ret->Set(String::NewFromUtf8(isolate, "mx"), Number::New(isolate, obj->mx));
-  ret->Set(String::NewFromUtf8(isolate, "my"), Number::New(isolate, obj->my));
-  ret->Set(String::NewFromUtf8(isolate, "mz"), Number::New(isolate, obj->mz));
+  ret->Set(String::NewFromUtf8(isolate, "ax"), Number::New(isolate, 1.0));
+  // ret->Set(String::NewFromUtf8(isolate, "ax"), Number::New(isolate, obj->ax));
+  // ret->Set(String::NewFromUtf8(isolate, "ay"), Number::New(isolate, obj->ay));
+  // ret->Set(String::NewFromUtf8(isolate, "az"), Number::New(isolate, obj->az));
+  // ret->Set(String::NewFromUtf8(isolate, "gx"), Number::New(isolate, obj->gx));
+  // ret->Set(String::NewFromUtf8(isolate, "gy"), Number::New(isolate, obj->gy));
+  // ret->Set(String::NewFromUtf8(isolate, "gz"), Number::New(isolate, obj->gz));
+  // ret->Set(String::NewFromUtf8(isolate, "mx"), Number::New(isolate, obj->mx));
+  // ret->Set(String::NewFromUtf8(isolate, "my"), Number::New(isolate, obj->my));
+  // ret->Set(String::NewFromUtf8(isolate, "mz"), Number::New(isolate, obj->mz));
 
   args.GetReturnValue().Set(ret);
 }
