@@ -39,6 +39,7 @@ chrt -f -p 99 PID
 
 using namespace v8;
 
+Persistent<Function> AHRS::constructor;
 
 AHRS::~AHRS () {
   MPU9250 imuDevice;
@@ -53,14 +54,6 @@ AHRS::~AHRS () {
   while(1)
     imuLoop();
 }
-
-//
-// get AHRS data (internal)
-//
-// void getCurrentAHRSOutput() {
-
-// }
-
 //
 // AHRS/IMU setup
 //
@@ -136,8 +129,8 @@ void imuLoop(){
     // Console output
     printf("ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
     // Network output
-    sprintf(sendline,"%10f %10f %10f %10f %dHz\n", ahrs.getW(), ahrs.getX(), ahrs.getY(), ahrs.getZ(), int(1/dt));
-    sendto(sockfd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    // sprintf(sendline,"%10f %10f %10f %10f %dHz\n", ahrs.getW(), ahrs.getX(), ahrs.getY(), ahrs.getZ(), int(1/dt));
+    // sendto(sockfd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
     dtsumm = 0;
   }
 }
@@ -145,7 +138,7 @@ void imuLoop(){
 // 
 // Node interfaces
 //
-void AHRS::New(){
+void AHRS::New(const FunctionCallbackInfo<Value>& args){
   HandleScope scope(isolate);
   if (args.IsConstructCall()) {
     // Invoked as constructor: `new AHRS(...)`
@@ -159,7 +152,7 @@ void AHRS::New(){
   }
 }
 
-void AHRS::Init() {
+void AHRS::Init(Handle<Object> exports) {
   Isolate* isolate = Isolate::GetCurrent();
   // Prepare constructor template
   Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
@@ -172,7 +165,7 @@ void AHRS::Init() {
       tpl->GetFunction());
 }
 
-void AHRS::getData(){
+void AHRS::getData(const FunctionCallbackInfo<Value>& args){
   Isolate* isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   AHRS* obj = ObjectWrap::Unwrap<AHRS>(args.Holder());
@@ -234,28 +227,28 @@ void AHRS::getData(){
 
 //=============================================================================
 
-int main(int argc, char *argv[])
-{   
-  if (check_apm()) {
-    return 1;
-  }
+// int main(int argc, char *argv[])
+// {   
+  // if (check_apm()) {
+    // return 1;
+  // }
 
-  //--------------------------- Network setup -------------------------------
+  // //--------------------------- Network setup -------------------------------
 
-  sockfd = socket(AF_INET,SOCK_DGRAM,0);
-  servaddr.sin_family = AF_INET;
+  // sockfd = socket(AF_INET,SOCK_DGRAM,0);
+  // servaddr.sin_family = AF_INET;
 
-  if (argc == 3)  {
-    servaddr.sin_addr.s_addr = inet_addr(argv[1]);
-    servaddr.sin_port = htons(atoi(argv[2]));
-  } else {
-    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    servaddr.sin_port = htons(7000);
-  }
+  // if (argc == 3)  {
+    // servaddr.sin_addr.s_addr = inet_addr(argv[1]);
+    // servaddr.sin_port = htons(atoi(argv[2]));
+  // } else {
+    // servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    // servaddr.sin_port = htons(7000);
+  // }
 
-  //-------------------- IMU setup and main loop ----------------------------
+  // //-------------------- IMU setup and main loop ----------------------------
 
-}
+// }
 
 // #include "imu.h"
 // #include <MPU9250.h>
@@ -264,7 +257,6 @@ int main(int argc, char *argv[])
 
 // using namespace v8;
 
-// Persistent<Function> IMU::constructor;
 
 
 // IMU::~IMU() {
