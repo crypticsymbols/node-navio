@@ -54,7 +54,7 @@ AHRS::AHRS () {
 
   imuSetup();
 
-  std::thread worker (spawnLoop);
+  std::thread( [this], spawnLoop());
 }
 
 void AHRS::spawnLoop () {
