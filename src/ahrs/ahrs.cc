@@ -43,8 +43,10 @@ using namespace v8;
 Persistent<Function> AHRS::constructor;
 
 AHRS::~AHRS () {
-  MPU9250 imu;
-  MAHONY ahrs;  
+  MPU9250 imuD;
+  MAHONY ahrsD;
+  this->imu = imuD;
+  this->ahrs = ahrsD;
   mindt = 0.01;
   dtsumm = 0;
   isFirst = 1;
