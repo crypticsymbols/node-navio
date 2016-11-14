@@ -54,11 +54,11 @@ AHRS::AHRS () {
 
   imuSetup();
 
-  std::thread( [this] { spawnLoop(); } );
-}
+  // std::thread( [this] { spawnLoop(); } );
+// }
 
-void AHRS::spawnLoop () {
-  while(1)
+// void AHRS::spawnLoop () {
+  // while(1)
     imuLoop();
 }
 
