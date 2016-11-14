@@ -23,6 +23,7 @@ kernel is available at emlid.com and priority can be set with chrt command:
 chrt -f -p 99 PID
 */
 
+#include "ahrs.h"
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
