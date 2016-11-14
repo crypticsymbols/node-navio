@@ -5,7 +5,7 @@
 #include <node_object_wrap.h>
 
 #include <MPU9250.h>
-#include <mahony.hpp>
+#include "mahony.hpp"
 
 class IMU : public node::ObjectWrap {
   public:
