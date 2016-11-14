@@ -140,6 +140,7 @@ void AHRS::imuLoop(){
 // Node interfaces
 //
 void AHRS::New(const FunctionCallbackInfo<Value>& args){
+  Isolate* isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   if (args.IsConstructCall()) {
     // Invoked as constructor: `new AHRS(...)`
