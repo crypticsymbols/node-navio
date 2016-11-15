@@ -7,7 +7,7 @@
           "target_name": "ahrs",
           "include_dirs": [ 
             "<!(node -e \"require('nan')\")", 
-            ""<!(node -e \"require('streaming-worker-sdk')\"), 
+            "<!(node -e \"require('streaming-worker-sdk')\")", 
           ],
           "sources": [
             "addon.cc",
