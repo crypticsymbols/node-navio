@@ -3,8 +3,10 @@ if (process.platform === 'linux') {
   var bindings = require('bindings')
   var p = bindings('pwm.node')
   var i = bindings('imu.node')
-  var a = bindings('ahrs.node')
+  var ahrs = bindings('ahrs.node')
 }
+
+var worker = require('streaming-worker')
 
 module.exports = {
 
@@ -20,17 +22,8 @@ module.exports = {
     }
   },
   ahrsData: function() {
-    try {
-      return new a.AHRS();
-    } catch (e) {
-      return {
-        getData: function() {
-          return {
-            ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, mx: 0, my: 0, mz: 0
-          }
-        }
-      }
-    }
+    ahrsDataInterface = worker(ahrs.path)
+    return ahrsDataInterface
   },
   imuReader: function() {
     try {
