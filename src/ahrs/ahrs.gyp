@@ -5,10 +5,13 @@
       'targets': [
         {
           "target_name": "ahrs",
-          "sources": [ 
-            "ahrs_wrapper.cc", 
-            "ahrs.cc", 
+          "include_dirs": [ 
+            "<!(node -e \"require('nan')\")", 
+            ""<!(node -e \"require('streaming-worker-sdk')\"), 
           ],
+          "sources": [
+            "addon.cc",
+          ]
           "dependencies" : [
             '../Navio/navio.gyp:navio'
           ],
