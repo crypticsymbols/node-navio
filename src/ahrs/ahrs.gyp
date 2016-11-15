@@ -11,7 +11,7 @@
           ],
           "sources": [
             "addon.cc",
-          ]
+          ],
           "dependencies" : [
             '../Navio/navio.gyp:navio'
           ],
