@@ -143,5 +143,5 @@ class AHRS{
         dtsumm = 0;
       }
     }
-}
+};
 
