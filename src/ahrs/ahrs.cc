@@ -127,7 +127,7 @@ class AHRS{
 
       //------------------------ Read Euler angles ------------------------------
 
-      ahrs.getEuler(*roll, *pitch, *yaw);
+      ahrs.getEuler(&roll, &pitch, &yaw);
 
       //------------- Console and network output with a lowered rate ------------
 
