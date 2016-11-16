@@ -84,7 +84,7 @@ class AHRS{
       ahrs.setGyroOffset(offset[0], offset[1], offset[2]);
     }
 
-    void imuLoop(float &roll, float &pitch, float &yaw)
+    void imuLoop(float* roll, float* pitch, float* yaw)
     {
       //----------------------- Calculate delta time ----------------------------
       gettimeofday(&tv,NULL);
@@ -127,7 +127,7 @@ class AHRS{
 
       //------------------------ Read Euler angles ------------------------------
 
-      ahrs.getEuler(&roll, &pitch, &yaw);
+      ahrs.getEuler(*roll, *pitch, *yaw);
 
       //------------- Console and network output with a lowered rate ------------
 
