@@ -87,7 +87,6 @@ class AHRS{
     void imuLoop()
     {
       //----------------------- Calculate delta time ----------------------------
-
       gettimeofday(&tv,NULL);
       previoustime = currenttime;
       currenttime = 1000000 * tv.tv_sec + tv.tv_usec;
@@ -96,9 +95,7 @@ class AHRS{
       gettimeofday(&tv,NULL);
       currenttime = 1000000 * tv.tv_sec + tv.tv_usec;
       dt = (currenttime - previoustime) / 1000000.0;
-
       //-------- Read raw measurements from the MPU and update AHRS --------------
-
       // Accel + gyro.
       // imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
       imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
@@ -146,8 +143,5 @@ class AHRS{
         dtsumm = 0;
       }
     }
-
 }
-
-
 

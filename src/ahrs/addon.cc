@@ -4,6 +4,7 @@
 #include <thread>
 #include "streaming-worker.h"
 #include "json.hpp" //https://github.com/nlohmann/json
+#include "ahrs.cc" // Main AHRS class
 
 using namespace std;
 using json = nlohmann::json;
