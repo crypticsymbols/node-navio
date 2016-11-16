@@ -15,7 +15,8 @@ class Sensor : public StreamingWorker {
     Sensor(Callback *data, Callback *complete, Callback *error_callback,  v8::Local<v8::Object> & options) 
       : StreamingWorker(data, complete, error_callback){
 
-        name = "default sensor";
+        name = "Mahony AHRS";
+
         if (options->IsObject() ) {
           v8::Local<v8::Value> name_ = options->Get(New<v8::String>("name").ToLocalChecked());
           if ( name_->IsString() ) {
@@ -25,21 +26,23 @@ class Sensor : public StreamingWorker {
         }
       }
 
-    void send_sample(const AsyncProgressWorker::ExecutionProgress& progress, double x, double y, double z) {
+    void send_sample(const AsyncProgressWorker::ExecutionProgress& progress, double roll, double pitch, double yaw) {
       json sample;
       sample["sensor"] = name;
-      sample["position"]["x"] = x;
-      sample["position"]["y"] = y;
-      sample["position"]["z"] = z;
+      sample["position"]["roll"] = roll;
+      sample["position"]["pitch"] = pitch;
+      sample["position"]["yaw"] = yaw;
       Message tosend("position_sample", sample.dump());
-      writeToNode(progress, tosend);
+      writeToNode(progress, package);
     }
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
-      std::random_device rd;
-      std::uniform_real_distribution<double> pos_dist(-1.0, 1.0);
+      // std::random_device rd;
+      // std::uniform_real_distribution<double> pos_dist(-1.0, 1.0);
       while (!closed()) {
-        send_sample(progress, pos_dist(rd), pos_dist(rd), pos_dist(rd));
+        // Send it
+        send_data(progress, roll, pitch, yaw);
+        // Throttle here to prevent hammering node process
         std::this_thread::sleep_for(chrono::milliseconds(50));
       }
     }
