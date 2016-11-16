@@ -38,12 +38,17 @@ class AHRSInterface : public StreamingWorker {
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
+      //
+      //
+      // I do NOT like ow deep these references go.
+      // Fix this shit.
+      //
+      //
       float roll;
       float pitch;
       float yaw;
 
       this->ahrs.imuSetup();
-
       while (!closed()) {
         // Get it
         this->ahrs.imuLoop(&roll, &pitch, &yaw);
