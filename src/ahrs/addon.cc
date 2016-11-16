@@ -26,7 +26,7 @@ class AHRSInterface : public StreamingWorker {
         }
       }
 
-    void send_sample(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
+    void send_data(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
       json sample;
       sample["sensor"] = name;
       sample["position"]["roll"] = roll;
@@ -34,10 +34,6 @@ class AHRSInterface : public StreamingWorker {
       sample["position"]["yaw"] = yaw;
       Message tosend("position_sample", sample.dump());
       writeToNode(progress, package);
-    }
-
-    void responder() {
-    
     }
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
