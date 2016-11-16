@@ -61,7 +61,9 @@ class AHRS{
     struct sockaddr_in servaddr = {0};
     char sendline[80];
   public:
-
+    AHRS::AHRS(){
+      // MPU9250 imu;
+    }
     void imuSetup()
     {
       imu.initialize();
