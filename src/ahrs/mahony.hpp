@@ -1,5 +1,5 @@
 /*
-   Mahony AHRS algorithm implemented by Madgwick
+Mahony AHRS algorithm implemented by Madgwick
 See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
 
 Adapted by Igor Vereninov (igor.vereninov@emlid.com)
