@@ -10,9 +10,9 @@ using namespace std;
 using json = nlohmann::json;
 
 
-class Sensor : public StreamingWorker {
+class AHRSInterface : public StreamingWorker {
   public:
-    Sensor(Callback *data, Callback *complete, Callback *error_callback,  v8::Local<v8::Object> & options) 
+    AHRSInterface(Callback *data, Callback *complete, Callback *error_callback,  v8::Local<v8::Object> & options) 
       : StreamingWorker(data, complete, error_callback){
 
         name = "Mahony AHRS";
@@ -26,7 +26,7 @@ class Sensor : public StreamingWorker {
         }
       }
 
-    void send_sample(const AsyncProgressWorker::ExecutionProgress& progress, double roll, double pitch, double yaw) {
+    void send_sample(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
       json sample;
       sample["sensor"] = name;
       sample["position"]["roll"] = roll;
@@ -36,24 +36,36 @@ class Sensor : public StreamingWorker {
       writeToNode(progress, package);
     }
 
+    void responder() {
+    
+    }
+
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
-      // std::random_device rd;
-      // std::uniform_real_distribution<double> pos_dist(-1.0, 1.0);
+
+      float roll;
+      float pitch;
+      float yaw;
+
+      this->ahrs.imuSetup();
+
       while (!closed()) {
+        // Get it
+        this->ahrs.imuLoop(&roll, &pitch, &yaw);
         // Send it
         send_data(progress, roll, pitch, yaw);
-        // Throttle here to prevent hammering node process
-        std::this_thread::sleep_for(chrono::milliseconds(50));
+        // Good things come to those who wait
+        std::this_thread::sleep_for(chrono::milliseconds(10));
       }
     }
   private:
     string name;
+    AHRS ahrs;
 };
 
 StreamingWorker * create_worker(Callback *data
     , Callback *complete
     , Callback *error_callback, v8::Local<v8::Object> & options) {
-  return new Sensor(data, complete, error_callback, options);
+  return new AHRSInterface(data, complete, error_callback, options);
 }
 
 NODE_MODULE(sensor_sim, StreamWorkerWrapper::Init)
