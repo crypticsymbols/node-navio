@@ -30,8 +30,8 @@ chrt -f -p 99 PID
 #include <unistd.h>
 #include <sys/time.h>
 #include <MPU9250.h>
-#include <mahony.hpp>
 #include <Util.h>
+#include "mahony.hpp"
 
 #define G_SI 9.80665
 #define PI   3.14159

@@ -7,9 +7,6 @@
         "target_name": "ahrs",
         "sources": [
           "addon.cc",
-          "json.hpp",
-          "ahrs.cc",
-          "mahony.hpp"
         ],
         "include_dirs": [ 
           "<!(node -e \"require('nan')\")", 
