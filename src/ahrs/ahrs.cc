@@ -41,7 +41,7 @@ class AHRS{
   private:
     // Objects
     MPU9250 imu;    // MPU9250
-    AHRS    ahrs;   // Mahony AHRS
+    MAHONY    ahrs;   // Mahony AHRS
     // Sensor data
     float ax, ay, az;
     float gx, gy, gz;
@@ -61,7 +61,7 @@ class AHRS{
     struct sockaddr_in servaddr = {0};
     char sendline[80];
   public:
-    AHRS::AHRS(){
+    AHRS(){
       // MPU9250 imu;
     }
     void imuSetup()
