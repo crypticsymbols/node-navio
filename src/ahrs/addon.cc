@@ -37,23 +37,23 @@ class AHRSInterface : public StreamingWorker {
       writeToNode(progress, package);
     }
 
-    AsyncProgressWorker::ExecutionProgress v8progress;
+    // AsyncProgressWorker::ExecutionProgress v8progress;
 
-    void receiveOutput(float roll, float pitch, float yaw){
-      this->sendData(v8progress, roll, pitch, yaw);
-    }
+    // void receiveOutput(float roll, float pitch, float yaw){
+      // this->sendData(v8progress, roll, pitch, yaw);
+    // }
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
-      v8progress = progress;
+      // v8progress = progress;
 
       // float roll;
       // float pitch;
       // float yaw;
 
 
-      auto callback = [this](float roll, float pitch, float yaw) { 
-        this->receiveOutput(roll, pitch, yaw);
+      auto callback = [this, &progress](float roll, float pitch, float yaw) { 
+        this->sendData(roll, pitch, yaw);
       };
 
       // this->ahrs.setCallback(callback);
