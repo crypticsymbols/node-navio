@@ -47,7 +47,7 @@ class AHRS{
     float gx, gy, gz;
     float mx, my, mz;
     // Orientation data
-    // float roll, pitch, yaw;
+    float roll, pitch, yaw;
     // Timing data
     float offset[3];
 
