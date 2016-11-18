@@ -59,7 +59,7 @@ class AHRS{
     int isFirst = 1;
     // Network data
     int sockfd;
-    struct sockaddr_in servaddr = {0};
+    // struct sockaddr_in servaddr = {0};
     char sendline[80];
 
     // std::function outputCallback;

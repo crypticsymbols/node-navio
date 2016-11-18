@@ -27,7 +27,7 @@ class AHRSInterface : public StreamingWorker {
         }
       }
 
-    void send_data(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
+    void sendData(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
       json sample;
       sample["sensor"] = name;
       sample["position"]["roll"] = roll;
@@ -37,14 +37,15 @@ class AHRSInterface : public StreamingWorker {
       writeToNode(progress, package);
     }
 
-    const v8progress;
+    const AsyncProgressWorker::ExecutionProgress v8progress;
+
     void receiveOutput(float roll, float pitch, float yaw){
-      this->sendData(v8progress, roll, pitch, yaw)
+      this.sendData(v8progress, roll, pitch, yaw)
     }
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
-      this->v8progress = progress;
+      this.v8progress = progress;
 
       // float roll;
       // float pitch;
