@@ -142,6 +142,7 @@ class AHRS{
       if(dtsumm > 0.05)
 
       // printf("inner ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
+      printf(".");
         outputCallback(roll, pitch, yaw);
       // {
       // // Console output
