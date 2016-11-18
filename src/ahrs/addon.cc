@@ -37,10 +37,10 @@ class AHRSInterface : public StreamingWorker {
       writeToNode(progress, package);
     }
 
-    const AsyncProgressWorker::ExecutionProgress v8progress;
+    AsyncProgressWorker::ExecutionProgress v8progress;
 
     void receiveOutput(float roll, float pitch, float yaw){
-      this.sendData(v8progress, roll, pitch, yaw)
+      this->sendData(v8progress, roll, pitch, yaw)
     }
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
