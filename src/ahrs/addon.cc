@@ -1,3 +1,4 @@
+#include <functional>
 #include <iostream>
 #include <chrono>
 #include <random>
@@ -15,8 +16,8 @@ class AHRSInterface : public StreamingWorker {
     AHRSInterface(Callback *data, Callback *complete, Callback *error_callback,  v8::Local<v8::Object> & options) 
       : StreamingWorker(data, complete, error_callback){
 
-        name = "Mahony AHRS";
-
+        name = "Mahony Algorithm AHRS";
+        
         if (options->IsObject() ) {
           v8::Local<v8::Value> name_ = options->Get(New<v8::String>("name").ToLocalChecked());
           if ( name_->IsString() ) {
@@ -36,26 +37,35 @@ class AHRSInterface : public StreamingWorker {
       writeToNode(progress, package);
     }
 
+    const v8progress;
+    void receiveOutput(float roll, float pitch, float yaw){
+      this->sendData(v8progress, roll, pitch, yaw)
+    }
+
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
-      //
-      //
-      // I do NOT like ow deep these references go.
-      // Fix this shit.
-      //
-      //
-      float roll;
-      float pitch;
-      float yaw;
+      this->v8progress = progress;
+
+      // float roll;
+      // float pitch;
+      // float yaw;
+
+
+      auto callback = [this](float roll, float pitch, float yaw) { 
+        this->receiveOutput(roll, pitch, yaw);
+      };
+
+      this->ahrs.setCallback(callback);
 
       this->ahrs.imuSetup();
+
       while (!closed()) {
         // Get it
-        this->ahrs.imuLoop(&roll, &pitch, &yaw);
+        this->ahrs.imuLoop();
         // Send it
-        send_data(progress, roll, pitch, yaw);
+        // send_data(progress, roll, pitch, yaw);
         // Good things come to those who wait
-        std::this_thread::sleep_for(chrono::milliseconds(10));
+        std::this_thread::sleep_for(chrono::milliseconds(1));
       }
     }
   private:
