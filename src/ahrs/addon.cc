@@ -33,8 +33,8 @@ class AHRSInterface : public StreamingWorker {
       sample["position"]["roll"] = roll;
       sample["position"]["pitch"] = pitch;
       sample["position"]["yaw"] = yaw;
-      Message tosend("position_sample", sample.dump());
-      writeToNode(progress, package);
+      Message message("position_sample", sample.dump());
+      writeToNode(progress, message);
     }
 
     // AsyncProgressWorker::ExecutionProgress v8progress;
