@@ -53,7 +53,7 @@ class AHRSInterface : public StreamingWorker {
 
 
       auto callback = [this, &progress](float roll, float pitch, float yaw) { 
-        this->sendData(roll, pitch, yaw);
+        this->sendData(progress, roll, pitch, yaw);
       };
 
       // this->ahrs.setCallback(callback);
