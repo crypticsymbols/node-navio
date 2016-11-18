@@ -66,9 +66,9 @@ class AHRS{
 
   public:
     // void setCallback (std::function<void(float roll, float pitch, float yaw)> callback){
-      // this->outputCallback = callback;
+    // this->outputCallback = callback;
     // }
-    
+
     void imuSetup()
     {
       imu.initialize();
@@ -143,13 +143,12 @@ class AHRS{
 
         outputCallback(roll, pitch, yaw);
       // {
-        // // Console output
-        // printf("ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
-        // // Network output
-        // sprintf(sendline,"%10f %10f %10f %10f %dHz\n", ahrs.getW(), ahrs.getX(), ahrs.getY(), ahrs.getZ(), int(1/dt));
-        // sendto(sockfd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
-        dtsumm = 0;
-      }
+      // // Console output
+      // printf("ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
+      // // Network output
+      // sprintf(sendline,"%10f %10f %10f %10f %dHz\n", ahrs.getW(), ahrs.getX(), ahrs.getY(), ahrs.getZ(), int(1/dt));
+      // sendto(sockfd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+      dtsumm = 0;
     }
 };
 
