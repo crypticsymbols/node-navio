@@ -28,6 +28,8 @@ class AHRSInterface : public StreamingWorker {
       }
 
     void sendData(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
+
+      printf("ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f \n", roll, pitch, yaw);
       json sample;
       sample["sensor"] = name;
       sample["position"]["roll"] = roll;
