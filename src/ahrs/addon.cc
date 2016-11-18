@@ -40,12 +40,12 @@ class AHRSInterface : public StreamingWorker {
     AsyncProgressWorker::ExecutionProgress v8progress;
 
     void receiveOutput(float roll, float pitch, float yaw){
-      this->sendData(v8progress, roll, pitch, yaw)
+      this->sendData(v8progress, roll, pitch, yaw);
     }
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
-      this.v8progress = progress;
+      v8progress = progress;
 
       // float roll;
       // float pitch;
