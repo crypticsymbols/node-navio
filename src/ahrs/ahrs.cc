@@ -62,12 +62,12 @@ class AHRS{
     struct sockaddr_in servaddr = {0};
     char sendline[80];
 
-    std::function outputCallback;
+    // std::function outputCallback;
 
   public:
-    void setCallback (std::function<void(float roll, float pitch, float yaw)> callback){
-      this->outputCallback = callback;
-    }
+    // void setCallback (std::function<void(float roll, float pitch, float yaw)> callback){
+      // this->outputCallback = callback;
+    // }
     
     void imuSetup()
     {
@@ -91,7 +91,7 @@ class AHRS{
       ahrs.setGyroOffset(offset[0], offset[1], offset[2]);
     }
 
-    void imuLoop()
+    void imuLoop(std::function<void(float roll, float pitch, float yaw)> outputCallback)
     {
       //----------------------- Calculate delta time ----------------------------
       gettimeofday(&tv,NULL);
@@ -141,7 +141,7 @@ class AHRS{
       dtsumm += dt;
       if(dtsumm > 0.05)
 
-        this->outputCallback(roll, pitch, yaw);
+        outputCallback(roll, pitch, yaw);
       // {
         // // Console output
         // printf("ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));

@@ -55,13 +55,13 @@ class AHRSInterface : public StreamingWorker {
         this->receiveOutput(roll, pitch, yaw);
       };
 
-      this->ahrs.setCallback(callback);
+      // this->ahrs.setCallback(callback);
 
       this->ahrs.imuSetup();
 
       while (!closed()) {
         // Get it
-        this->ahrs.imuLoop();
+        this->ahrs.imuLoop(callback);
         // Send it
         // send_data(progress, roll, pitch, yaw);
         // Good things come to those who wait
