@@ -55,8 +55,8 @@ class AHRSInterface : public StreamingWorker {
 
       this->ahrs.imuSetup();
 
-      int ahrsLoopInterval = 1; // Interval calucaltions are performed
-      int callbackInterval = 10; // Interval results are sent
+      int ahrsLoopInterval = 1; // Interval calucaltions are performed in ms
+      int callbackInterval = 10; // Interval results are sent in ms
 
       while (!closed()) {
 
