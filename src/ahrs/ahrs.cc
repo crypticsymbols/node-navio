@@ -126,7 +126,7 @@ class AHRS{
       //------------- Console and network output with a lowered rate ------------
 
       dtsumm += dt;
-      if(dtsumm > callbackInterval) {
+      if(dtsumm > callbackInterval/1000) {
 
         outputCallback(roll, pitch, yaw);
 
