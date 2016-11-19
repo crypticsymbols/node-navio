@@ -1,3 +1,13 @@
+//
+//
+//
+// Many many MANY thanks to Scott Frees for the awesome library
+// and code examples!
+//
+// https://github.com/freezer333/streaming-worker
+//
+//
+//
 #include <functional>
 #include <iostream>
 #include <chrono>
@@ -28,47 +38,31 @@ class AHRSInterface : public StreamingWorker {
       }
 
     void sendData(const AsyncProgressWorker::ExecutionProgress& progress, float roll, float pitch, float yaw) {
-
-      json sample;
-      sample["sensor"] = name;
-      sample["position"]["roll"] = roll;
-      sample["position"]["pitch"] = pitch;
-      sample["position"]["yaw"] = yaw;
-      Message message("position_sample", sample.dump());
+      json ahrsState;
+      ahrsState["sensor"] = name;
+      ahrsState["position"]["roll"] = roll;
+      ahrsState["position"]["pitch"] = pitch;
+      ahrsState["position"]["yaw"] = yaw;
+      Message message("position_sample", ahrsState.dump());
       writeToNode(progress, message);
     }
-
-    // AsyncProgressWorker::ExecutionProgress v8progress;
-
-    // void receiveOutput(float roll, float pitch, float yaw){
-      // this->sendData(v8progress, roll, pitch, yaw);
-    // }
-
+    
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
-      // v8progress = progress;
-
-      // float roll;
-      // float pitch;
-      // float yaw;
-
-
       auto callback = [this, &progress](float roll, float pitch, float yaw) { 
-        printf("callback ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f \n", roll, pitch, yaw);
         this->sendData(progress, roll, pitch, yaw);
       };
 
-      // this->ahrs.setCallback(callback);
-
       this->ahrs.imuSetup();
 
+      int ahrsLoopInterval = 1; // Interval calucaltions are performed
+      int callbackInterval = 10; // Interval results are sent
+
       while (!closed()) {
-        // Get it
-        this->ahrs.imuLoop(callback);
-        // Send it
-        // send_data(progress, roll, pitch, yaw);
-        // Good things come to those who wait
-        std::this_thread::sleep_for(chrono::milliseconds(100));
+
+        this->ahrs.imuLoop(callback, callbackInterval);
+
+        std::this_thread::sleep_for(chrono::milliseconds(ahrsLoopInterval));
       }
     }
   private:

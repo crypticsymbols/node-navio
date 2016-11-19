@@ -50,25 +50,13 @@ class AHRS{
     float roll, pitch, yaw;
     // Timing data
     float offset[3];
-
     struct timeval tv;
     float dt, maxdt;
     float mindt = 0.01;
     unsigned long previoustime, currenttime;
     float dtsumm = 0;
     int isFirst = 1;
-    // Network data
-    int sockfd;
-    // struct sockaddr_in servaddr = {0};
-    char sendline[80];
-
-    // std::function outputCallback;
-
   public:
-    // void setCallback (std::function<void(float roll, float pitch, float yaw)> callback){
-    // this->outputCallback = callback;
-    // }
-
     void imuSetup()
     {
       imu.initialize();
@@ -91,7 +79,7 @@ class AHRS{
       ahrs.setGyroOffset(offset[0], offset[1], offset[2]);
     }
 
-    void imuLoop(std::function<void(float roll, float pitch, float yaw)> outputCallback)
+    void imuLoop(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval)
     {
       //----------------------- Calculate delta time ----------------------------
       gettimeofday(&tv,NULL);
@@ -122,7 +110,6 @@ class AHRS{
          ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, dt);
          */
 
-
       //------------------- Discard the time of the first cycle -----------------
 
       if (!isFirst)
@@ -139,17 +126,11 @@ class AHRS{
       //------------- Console and network output with a lowered rate ------------
 
       dtsumm += dt;
-      if(dtsumm > 0.05)
+      if(dtsumm > callbackInterval)
 
       // printf("inner ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
-      // printf(".");
         outputCallback(roll, pitch, yaw);
-      // {
-      // // Console output
-      // printf("ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
-      // // Network output
-      // sprintf(sendline,"%10f %10f %10f %10f %dHz\n", ahrs.getW(), ahrs.getX(), ahrs.getY(), ahrs.getZ(), int(1/dt));
-      // sendto(sockfd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+
       dtsumm = 0;
     }
 };
