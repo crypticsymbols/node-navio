@@ -6,6 +6,8 @@ if (process.platform === 'linux') {
   var ahrs = bindings('ahrs.node')
 }
 
+var EventEmitter = require('events')
+
 var worker = require('streaming-worker')
 
 module.exports = {
@@ -22,8 +24,14 @@ module.exports = {
     }
   },
   ahrsData: function() {
-    ahrsDataInterface = worker(ahrs.path)
-    return ahrsDataInterface
+    try {
+      var ahrsDataInterface = worker(ahrs.path)
+      return ahrsDataInterface
+    } catch (e) {
+      return {
+        from: new EventEmitter()
+      }
+    }
   },
   imuReader: function() {
     try {
