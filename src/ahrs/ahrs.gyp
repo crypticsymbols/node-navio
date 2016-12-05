@@ -8,8 +8,10 @@
         "sources": [
           "addon.cc",
         ],
-        "include_dirs": [ 
-          "../ardupilot/", 
+        "libraries" : [
+          "../ardupilot/"
+        ]
+        "include_dirs": [
           "<!(node -e \"require('nan')\")", 
           "<!(node -e \"require('streaming-worker-sdk')\")" 
         ],
