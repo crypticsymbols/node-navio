@@ -1,139 +1,116 @@
-/*
-   This code is provided under the BSD license.
-   Copyright (c) 2014, Emlid Limited. All rights reserved.
-   Written by Igor Vereninov and Mikhail Avkhimenia
-   twitter.com/emlidtech || www.emlid.com || info@emlid.com
+//#include <AP_RangeFinder.h>
+//#include <AP_Scheduler.h>
+//#include <StorageManager.h>
+//#include <Filter.h>
+//#include <AP_Buffer.h>
+//#include <AP_Notify.h>
+//#include <AP_Vehicle.h>
+//#include <DataFlash.h>
+//#include <AP_ADC.h>
+//#include <AP_Declination.h>
+//#include <AP_ADC_AnalogSource.h>
+//#include <AP_Progmem.h>
+//#include <AP_Math.h>
+//#include <AP_Param.h>
+// #include <AP_HAL.h>
+#include <AP_Common.h>
+#include <AP_InertialSensor.h>
+#include <AP_Baro.h>            // ArduPilot Mega Barometer Library
+#include <AP_GPS.h>
+#include <AP_AHRS.h>
+#include <AP_Compass.h>
+#include <AP_Airspeed.h>
+#include <AP_Baro.h>
+#include <AP_NavEKF.h>
+#include <AP_HAL_Linux.h>
+#include <AP_BattMonitor.h>
+#include <AP_SerialManager.h>
+#include <AP_AHRS_NavEKF.h>
 
-Application: Mahory AHRS algorithm supplied with data from MPU9250.
-Outputs roll, pitch and yaw in the console and sends quaternion
-over the network - it can be used with 3D IMU visualizer located in
-Navio/Applications/3D IMU visualizer.
+// const AP_HAL::HAL& hal = AP_HAL_BOARD_DRIVER;
 
-To run this app navigate to the directory containing it and run following commands:
-make
-sudo ./AHRS
+class AHRS {
+  public: 
+    void setup () {
 
-If you want to visualize IMU data on another machine pass it's address and port
-sudo ./AHRS ipaddress portnumber
+      ins.init(AP_InertialSensor::COLD_START, 
+          AP_InertialSensor::RATE_100HZ);
+      ahrs.init();
+      serial_manager.init();
 
-To achieve stable loop you need to run this application with a high priority
-on a linux kernel with real-time patch. Raspbian distribution with real-time
-kernel is available at emlid.com and priority can be set with chrt command:
-chrt -f -p 99 PID
-*/
-
-#include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <MPU9250.h>
-#include <Util.h>
-#include "mahony.hpp"
-
-#define G_SI 9.80665
-#define PI   3.14159
-
-class AHRS{
-
-  private:
-    // Objects
-    MPU9250 imu;    // MPU9250
-    MAHONY    ahrs;   // Mahony AHRS
-    // Sensor data
-    float ax, ay, az;
-    float gx, gy, gz;
-    float mx, my, mz;
-    // Orientation data
-    float roll, pitch, yaw;
-    // Timing data
-    float offset[3];
-    struct timeval tv;
-    float dt, maxdt;
-    float mindt = 0.01;
-    unsigned long previoustime, currenttime;
-    float dtsumm = 0;
-    int isFirst = 1;
-  public:
-    void imuSetup()
-    {
-      imu.initialize();
-      printf("Beginning Gyro calibration...\n");
-      for(int i = 0; i<100; i++)
-      {
-        imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-        gx *= 180 / PI;
-        gy *= 180 / PI;
-        gz *= 180 / PI;
-        offset[0] += (-gx*0.0175);
-        offset[1] += (-gy*0.0175);
-        offset[2] += (-gz*0.0175);
-        usleep(10000);
+      if( compass.init() ) {
+        hal.console->printf("Enabling compass\n");
+        ahrs.set_compass(&compass);
+      } else {
+        hal.console->printf("No compass detected\n");
       }
-      offset[0]/=100.0;
-      offset[1]/=100.0;
-      offset[2]/=100.0;
-      printf("Offsets are: %f %f %f\n", offset[0], offset[1], offset[2]);
-      ahrs.setGyroOffset(offset[0], offset[1], offset[2]);
-    }
-
-    void imuLoop(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval)
-    {
-      //----------------------- Calculate delta time ----------------------------
-      gettimeofday(&tv,NULL);
-      previoustime = currenttime;
-      currenttime = 1000000 * tv.tv_sec + tv.tv_usec;
-      dt = (currenttime - previoustime) / 1000000.0;
-      if(dt < 1/1300.0) usleep((1/1300.0-dt)*1000000);
-      gettimeofday(&tv,NULL);
-      currenttime = 1000000 * tv.tv_sec + tv.tv_usec;
-      dt = (currenttime - previoustime) / 1000000.0;
-      //-------- Read raw measurements from the MPU and update AHRS --------------
-      // Accel + gyro.
-      // imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-      imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-      ax /= G_SI;
-      ay /= G_SI;
-      az /= G_SI;
-      gx *= 180 / PI;
-      gy *= 180 / PI;
-      gz *= 180 / PI;
-      // ahrs.updateIMU(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, dt);
-      ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, dt);
-
-      // Accel + gyro + mag. 
-      // Soft and hard iron calibration required for proper function.
-      /*
-         imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-         ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, dt);
-         */
-
-      //------------------- Discard the time of the first cycle -----------------
-
-      if (!isFirst)
-      {
-        if (dt > maxdt) maxdt = dt;
-        if (dt < mindt) mindt = dt;
+      gps.init(NULL, serial_manager);
+    };
+    struct Location current_loc;
+    float heading = 0;
+    void update() {
+      ahrs.update();
+      gps.update();
+      if (compass.read()) {
+        heading = compass.calculate_heading(ahrs.get_dcm_matrix());
+// #if WITH_GPS
+        // g_gps->update();
+// #endif
       }
-      isFirst = 0;
+    };
+    void getData(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval) {
+      ahrs.get_position(current_loc);
+      Vector3f drift  = ahrs.get_gyro_drift();
+      outputCallback(ahrs.roll, ahrs.pitch, ahrs.yaw);
+      // hal.console->printf_P(
+          // PSTR("r:%4.1f  p:%4.1f y:%4.1f "
+            // "drift=(%5.1f %5.1f %5.1f) hdg=%.1f lat=%d\n"),
+          // ToDeg(ahrs.roll),
+          // ToDeg(ahrs.pitch),
+          // ToDeg(ahrs.yaw),
+          // ToDeg(drift.x),
+          // ToDeg(drift.y),
+          // ToDeg(drift.z),
+          // compass.use_for_yaw() ? ToDeg(heading) : 0.0f,
+          // current_loc.lat);
+    };
+    NavEKF EKF{&ahrs, baro, rng};
+    RangeFinder rng;
+    AP_GPS gps;
+    AP_InertialSensor ins;
+    AP_Baro baro;
+    Compass compass;
+    AP_SerialManager serial_manager;
+    AP_AHRS_NavEKF ahrs{ins, baro, gps, rng, EKF};
 
-      //------------------------ Read Euler angles ------------------------------
-
-      ahrs.getEuler(&roll, &pitch, &yaw);
-
-      //------------- Console and network output with a lowered rate ------------
-
-      dtsumm += dt;
-      if(dtsumm > callbackInterval/1000) {
-
-        outputCallback(roll, pitch, yaw);
-
-        dtsumm = 0;
-
-      }
-      // printf("inner ROLL: %+05.2f PITCH: %+05.2f YAW: %+05.2f PERIOD %.4fs RATE %dHz \n", roll, pitch, yaw * -1, dt, int(1/dt));
-    }
 };
 
+// AHRS instance = AHRS();
+
+// #define HIGH 1
+// #define LOW 0
+
+// void setup(void)
+// {
+
+  // instance.setup();
+
+// }
+
+// void loop(void)
+// {
+  // static uint16_t counter;
+  // static uint32_t last_t, last_print, last_compass;
+  // uint32_t now = hal.scheduler->micros();
+
+  // instance.update();
+  // counter++;
+
+  // if (now - last_print >= 100000 [> 100ms : 10hz <]) {
+    // instance.getData();
+    // last_print = now;
+    // counter = 0;
+  // }
+// }
+
+// AP_HAL_MAIN();

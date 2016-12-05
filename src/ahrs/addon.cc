@@ -53,14 +53,16 @@ class AHRSInterface : public StreamingWorker {
         this->sendData(progress, roll, pitch, yaw);
       };
 
-      this->ahrs.imuSetup();
+      this->ahrs.setup();
 
       int ahrsLoopInterval = 1; // Interval calucaltions are performed in ms
       int callbackInterval = 10; // Interval results are sent in ms
 
       while (!closed()) {
 
-        this->ahrs.imuLoop(callback, callbackInterval);
+        this->ahrs.update();
+
+        this->ahrs.getData(callback, callbackInterval);
 
         std::this_thread::sleep_for(chrono::milliseconds(ahrsLoopInterval));
       }

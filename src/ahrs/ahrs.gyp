@@ -9,6 +9,7 @@
           "addon.cc",
         ],
         "include_dirs": [ 
+          "../ardupilot/", 
           "<!(node -e \"require('nan')\")", 
           "<!(node -e \"require('streaming-worker-sdk')\")" 
         ],
