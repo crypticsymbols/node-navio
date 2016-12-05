@@ -71,15 +71,24 @@
           "<(module_root_dir)/src/ardupilot/libraries/AP_TECS",
           "<(module_root_dir)/src/ardupilot/libraries/AP_Terrain",
           "<(module_root_dir)/src/ardupilot/libraries/AP_Vehicle",
+          "<(module_root_dir)/src/ardupilot/libraries/DataFlash",
+          "<(module_root_dir)/src/ardupilot/libraries/Filter",
+          "<(module_root_dir)/src/ardupilot/libraries/GCS_Console",
+          "<(module_root_dir)/src/ardupilot/libraries/GCS_MAVLink",
+          "<(module_root_dir)/src/ardupilot/libraries/PID",
+          "<(module_root_dir)/src/ardupilot/libraries/RC_Channel",
+          "<(module_root_dir)/src/ardupilot/libraries/SITL",
+          "<(module_root_dir)/src/ardupilot/libraries/StorageManager",
+          "<(module_root_dir)/src/ardupilot/libraries/doc",
           "<!(node -e \"require('nan')\")",
           "<!(node -e \"require('streaming-worker-sdk')\")" 
-          ],
-          "dependencies" : [
-            '../Navio/navio.gyp:navio'
-          ],
-          "cflags": ["-Wall", "-std=c++11"],
-          "cflags!": [ '-fno-exceptions' ],
-          "cflags_cc!": [ '-fno-exceptions' ],
+        ],
+        "dependencies" : [
+          '../Navio/navio.gyp:navio'
+        ],
+        "cflags": ["-Wall", "-std=c++11"],
+        "cflags!": [ '-fno-exceptions' ],
+        "cflags_cc!": [ '-fno-exceptions' ],
       },
       ]
     }]
