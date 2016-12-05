@@ -9,8 +9,8 @@
           "addon.cc",
         ],
         "include_dirs": [
-          "<(module_root_dir)/src/ardupilot",
-          "<!(node -e \"require('nan')\")", 
+          "<(module_root_dir)/src/ardupilot/libraries/AP_Common",
+          "<!(node -e \"require('nan')\")",
           "<!(node -e \"require('streaming-worker-sdk')\")" 
         ],
         "dependencies" : [
