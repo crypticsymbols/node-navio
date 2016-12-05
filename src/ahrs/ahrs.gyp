@@ -23,6 +23,7 @@
           "<(module_root_dir)/src/ardupilot/libraries/AP_BattMonitor",
           "<(module_root_dir)/src/ardupilot/libraries/AP_SerialManager",
           "<(module_root_dir)/src/ardupilot/libraries/AP_AHRS_NavEKF",
+          "<(module_root_dir)/src/ardupilot/libraries/*",
           "<!(node -e \"require('nan')\")",
           "<!(node -e \"require('streaming-worker-sdk')\")" 
         ],
