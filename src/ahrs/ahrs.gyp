@@ -10,7 +10,7 @@
         ],
         "libraries" : [
           "../ardupilot/"
-        ]
+        ],
         "include_dirs": [
           "<!(node -e \"require('nan')\")", 
           "<!(node -e \"require('streaming-worker-sdk')\")" 
