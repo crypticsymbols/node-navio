@@ -10,7 +10,8 @@
         ],
         "defines": [
           "CONFIG_HAL_BOARD=7",
-          "CONFIG_HAL_BOARD_SUBTYPE=1003"
+          "CONFIG_HAL_BOARD_SUBTYPE=1003",
+          "D_GNU_SOURCE"
         ],
         "libraries": [
           "-lm",
@@ -94,8 +95,8 @@
         "dependencies" : [
           '../Navio/navio.gyp:navio'
         ],
-        "cflags": ['-MD', '-MT', '$@', '-D_GNU_SOURCE', "-Wall", "-std=c++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char"],
-        "cflags_cc": [ '-MD', '-MT', '-D_GNU_SOURCE', "-std=c++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char" ],
+        "cflags": ['-MD', '-MT', "-Wall", "-std=c++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char"],
+        "cflags_cc": [ '-MD', '-MT', "-std=c++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char" ],
         "cflags!": [ '-fno-exceptions' ],
         "cflags_cc!": [ '-fno-exceptions' ],
       },

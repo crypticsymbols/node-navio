@@ -25,7 +25,7 @@
 #include <AP_HAL_Linux.h>
 #include <AP_BattMonitor.h>
 #include <AP_SerialManager.h>
-// #include <AP_AHRS_NavEKF.h>
+#include <AP_AHRS_NavEKF.h>
 
 // const AP_HAL::HAL& hal = AP_HAL_BOARD_DRIVER;
 
@@ -33,35 +33,35 @@ class AHRS {
   public: 
     void setup () {
 
-      // ins.init(AP_InertialSensor::COLD_START, 
-      //     AP_InertialSensor::RATE_100HZ);
-      // ahrs.init();
-      // serial_manager.init();
+      ins.init(AP_InertialSensor::COLD_START, 
+          AP_InertialSensor::RATE_100HZ);
+      ahrs.init();
+      serial_manager.init();
 
-      // if( compass.init() ) {
-      //   // hal.console->printf("Enabling compass\n");
-      //   ahrs.set_compass(&compass);
-      // } else {
-      //   // hal.console->printf("No compass detected\n");
-      // }
-      // gps.init(NULL, serial_manager);
+      if( compass.init() ) {
+        // hal.console->printf("Enabling compass\n");
+        ahrs.set_compass(&compass);
+      } else {
+        // hal.console->printf("No compass detected\n");
+      }
+      gps.init(NULL, serial_manager);
     };
-    // struct Location current_loc;
-    // float heading = 0;
+    struct Location current_loc;
+    float heading = 0;
     void update() {
-      // ahrs.update();
-      // gps.update();
-      // if (compass.read()) {
-      //   heading = compass.calculate_heading(ahrs.get_dcm_matrix());
+      ahrs.update();
+      gps.update();
+      if (compass.read()) {
+        heading = compass.calculate_heading(ahrs.get_dcm_matrix());
 // #if WITH_GPS
         // g_gps->update();
 // #endif
-      // }
+      }
     };
     void getData(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval) {
-      // ahrs.get_position(current_loc);
-      // Vector3f drift  = ahrs.get_gyro_drift();
-      // outputCallback(ahrs.roll, ahrs.pitch, ahrs.yaw);
+      ahrs.get_position(current_loc);
+      Vector3f drift  = ahrs.get_gyro_drift();
+      outputCallback(ahrs.roll, ahrs.pitch, ahrs.yaw);
       // hal.console->printf_P(
           // PSTR("r:%4.1f  p:%4.1f y:%4.1f "
             // "drift=(%5.1f %5.1f %5.1f) hdg=%.1f lat=%d\n"),
@@ -75,13 +75,13 @@ class AHRS {
           // current_loc.lat);
     };
     RangeFinder rng;
-    // AP_GPS gps;
-    // AP_InertialSensor ins;
-    // AP_Baro baro;
-    // Compass compass;
-    // AP_SerialManager serial_manager;
-    // NavEKF EKF{&ahrs, baro, rng};
-    // AP_AHRS_NavEKF ahrs{ins, baro, gps, rng, EKF};
+    AP_GPS gps;
+    AP_InertialSensor ins;
+    AP_Baro baro;
+    Compass compass;
+    AP_SerialManager serial_manager;
+    NavEKF EKF{&ahrs, baro, rng};
+    AP_AHRS_NavEKF ahrs{ins, baro, gps, rng, EKF};
 
 };
 
