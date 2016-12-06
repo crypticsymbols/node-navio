@@ -98,7 +98,7 @@
         ],
         "cflags": ["-Wall", "-std=gnu++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char"],
         "cflags!": [ '-fno-exceptions' ],
-        "cflags_cc!": [ '-std=gnu++11', '-fno-exceptions', "-ffunction-sections", "-fdata-sections", "-fsigned-char" ],
+        "cflags_cc!": [ '-stdlib=libc++', '-std=gnu++11', '-fno-exceptions', "-ffunction-sections", "-fdata-sections", "-fsigned-char" ],
       },
       ]
     }]
