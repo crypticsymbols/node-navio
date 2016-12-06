@@ -74,13 +74,13 @@ class AHRS {
           // compass.use_for_yaw() ? ToDeg(heading) : 0.0f,
           // current_loc.lat);
     };
-    NavEKF EKF{&ahrs, baro, rng};
     RangeFinder rng;
     AP_GPS gps;
     AP_InertialSensor ins;
     AP_Baro baro;
     Compass compass;
     AP_SerialManager serial_manager;
+    NavEKF EKF{&ahrs, baro, rng};
     AP_AHRS_NavEKF ahrs{ins, baro, gps, rng, EKF};
 
 };
