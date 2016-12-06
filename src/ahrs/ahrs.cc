@@ -1,4 +1,4 @@
-//#include <AP_RangeFinder.h>
+#include <AP_RangeFinder.h>
 //#include <AP_Scheduler.h>
 //#include <StorageManager.h>
 //#include <Filter.h>
