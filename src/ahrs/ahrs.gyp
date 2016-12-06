@@ -9,8 +9,8 @@
           "addon.cc",
         ],
         "defines": [
-          "CONFIG_HAL_BOARD=HAL_BOARD_LINUX",
-          "CONFIG_HAL_BOARD_SUBTYPE=HAL_BOARD_SUBTYPE_LINUX_NAVIO"
+          "CONFIG_HAL_BOARD=7",
+          "CONFIG_HAL_BOARD_SUBTYPE=1003"
         ],
         "libraries": [
           "-lm",
