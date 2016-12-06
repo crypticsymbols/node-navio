@@ -39,10 +39,10 @@ class AHRS {
       serial_manager.init();
 
       if( compass.init() ) {
-        hal.console->printf("Enabling compass\n");
+        // hal.console->printf("Enabling compass\n");
         ahrs.set_compass(&compass);
       } else {
-        hal.console->printf("No compass detected\n");
+        // hal.console->printf("No compass detected\n");
       }
       gps.init(NULL, serial_manager);
     };
