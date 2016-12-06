@@ -44,6 +44,7 @@
           "<(module_root_dir)/src/ardupilot/libraries/AP_Frsky_Telem",
           "<(module_root_dir)/src/ardupilot/libraries/AP_GPS",
           "<(module_root_dir)/src/ardupilot/libraries/AP_HAL",
+          "<(module_root_dir)/src/ardupilot/libraries/AP_HAL/utility",
           "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_AVR",
           "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_Empty",
           "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_FLYMAPLE",
