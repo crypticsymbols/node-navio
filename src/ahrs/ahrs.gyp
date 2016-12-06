@@ -95,8 +95,8 @@
         "dependencies" : [
           '../Navio/navio.gyp:navio'
         ],
-        "cflags": ['-MD', '-MT', "-Wall", "-std=c++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char"],
-        "cflags_cc": [ '-MD', '-MT', "-std=c++11", "-ffunction-sections", "-fdata-sections", "-fsigned-char" ],
+        "cflags": [ "-fsigned-char" ],
+        "cflags_cc": [ "-fsigned-char" ],
         "cflags!": [ '-fno-exceptions' ],
         "cflags_cc!": [ '-fno-exceptions' ],
       },
