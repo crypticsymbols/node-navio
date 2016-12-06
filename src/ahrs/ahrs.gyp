@@ -12,10 +12,12 @@
           "CONFIG_HAL_BOARD=HAL_BOARD_LINUX",
           "CONFIG_HAL_BOARD_SUBTYPE=HAL_BOARD_SUBTYPE_LINUX_NAVIO"
         ],
-        "libraries": [
-          "-lm",
-          "-lpthread",
-          "-lrt"
+        "link_settings": [
+          "libraries": [
+            "-lm",
+            "-lpthread",
+            "-lrt"
+          ],
         ],
         "include_dirs": [
           "<(module_root_dir)/src/ardupilot/libraries/AC_AttitudeControl",
