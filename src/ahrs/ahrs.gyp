@@ -9,8 +9,8 @@
           "addon.cc",
         ],
         "defines": [
-          "CONFIG_HAL_BOARD=7",
-          "CONFIG_HAL_BOARD_SUBTYPE=1003"
+          "CONFIG_HAL_BOARD=HAL_BOARD_LINUX",
+          "CONFIG_HAL_BOARD_SUBTYPE=HAL_BOARD_SUBTYPE_LINUX_NAVIO"
         ],
         "libraries": [
           "-lm",
@@ -18,6 +18,8 @@
           "-lrt"
         ],
         "include_dirs": [
+          "<!(node -e \"require('nan')\")",
+          "<!(node -e \"require('streaming-worker-sdk')\")",
           "<(module_root_dir)/src/ardupilot/libraries/AC_AttitudeControl",
           "<(module_root_dir)/src/ardupilot/libraries/AC_Fence",
           "<(module_root_dir)/src/ardupilot/libraries/AC_PID",
@@ -87,9 +89,7 @@
           "<(module_root_dir)/src/ardupilot/libraries/RC_Channel",
           "<(module_root_dir)/src/ardupilot/libraries/SITL",
           "<(module_root_dir)/src/ardupilot/libraries/StorageManager",
-          "<(module_root_dir)/src/ardupilot/libraries/doc",
-          "<!(node -e \"require('nan')\")",
-          "<!(node -e \"require('streaming-worker-sdk')\")" 
+          "<(module_root_dir)/src/ardupilot/libraries/doc"
         ],
         "dependencies" : [
           '../Navio/navio.gyp:navio'
