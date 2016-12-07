@@ -15,6 +15,8 @@
               "CONFIG_HAL_BOARD=7",
               "CONFIG_HAL_BOARD_SUBTYPE=1003",
               'SKETCHNAME="ardupilot"',
+              'SKETCH="ardupilot"',
+              'SKETCHBOOK="ardupilot"',
               "_GNU_SOURCE"
             ],
             'include_dirs': [
@@ -103,6 +105,8 @@
           "defines": [
             "CONFIG_HAL_BOARD=7",
             'SKETCHNAME="ardupilot"',
+            'SKETCH="ardupilot"',
+            'SKETCHBOOK="ardupilot"',
             "CONFIG_HAL_BOARD_SUBTYPE=1003",
             "_GNU_SOURCE"
           ],
