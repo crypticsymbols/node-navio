@@ -20,7 +20,7 @@
           "sources": [
             "libraries/AP_RangeFinder/RangeFinder.cpp",
             "libraries/AP_Common/AP_Common.cpp",
-            "libraries/AP_IntertialSensor/AP_InertialSensor.cpp",
+            "libraries/AP_InertialSensor/AP_InertialSensor.cpp",
             "libraries/AP_Baro/AP_Baro.cpp",
             "libraries/AP_GPS/AP_GPS.cpp",
             "libraries/AP_AHRS/AP_AHRS.cpp",
