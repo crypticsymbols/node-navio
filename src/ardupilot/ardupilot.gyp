@@ -7,6 +7,10 @@
           "target_name": "ardupilot",
           'type': 'shared_library',
           'direct_dependent_settings': {
+            "cflags": [ "-fsigned-char", "-Wall", "-std=c++11" ],
+            "cflags_cc": [ "-fsigned-char", "-Wall", "-std=c++11", '-O3', '-g' ],
+            "cflags!": [ '-fno-exceptions' ],
+            "cflags_cc!": [ '-fno-exceptions' ],
             "defines": [
               "CONFIG_HAL_BOARD=7",
               "CONFIG_HAL_BOARD_SUBTYPE=1003",
