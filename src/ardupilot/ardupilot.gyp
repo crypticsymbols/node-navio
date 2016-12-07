@@ -108,6 +108,7 @@
             "libraries/AP_BattMonitor/AP_BattMonitor.cpp",
             "libraries/AP_SerialManager/AP_SerialManager.cpp",
             "libraries/AP_AHRS/AP_AHRS_NavEKF.cpp",
+            "libraries/Filter/DerivativeFilter.cpp",
           ],
           "defines": [
             "CONFIG_HAL_BOARD=7",
