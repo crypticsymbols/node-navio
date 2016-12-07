@@ -96,19 +96,7 @@
             },
           },
           "sources": [
-            "libraries/AP_RangeFinder/RangeFinder.cpp",
-            "libraries/AP_Common/AP_Common.cpp",
-            "libraries/AP_InertialSensor/AP_InertialSensor.cpp",
-            "libraries/AP_Baro/AP_Baro.cpp",
-            "libraries/AP_GPS/AP_GPS.cpp",
-            "libraries/AP_AHRS/AP_AHRS.cpp",
-            "libraries/AP_Compass/Compass.cpp",
-            "libraries/AP_Airspeed/AP_Airspeed.cpp",
-            "libraries/AP_NavEKF/AP_NavEKF.cpp",
-            "libraries/AP_BattMonitor/AP_BattMonitor.cpp",
-            "libraries/AP_SerialManager/AP_SerialManager.cpp",
-            "libraries/AP_AHRS/AP_AHRS_NavEKF.cpp",
-            "libraries/Filter/DerivativeFilter.cpp",
+            "<!@(find src/ardupilot/libraries/ -type f -name *.cpp)"
           ],
           "defines": [
             "CONFIG_HAL_BOARD=7",
