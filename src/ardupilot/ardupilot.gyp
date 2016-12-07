@@ -18,6 +18,7 @@
             ],
             'include_dirs': [
               "<(module_root_dir)/src/ardupilot/libraries/AC_AttitudeControl",
+              "<(module_root_dir)/src/ardupilot/libraries/AC_AttitudeControl",
               "<(module_root_dir)/src/ardupilot/libraries/AC_Fence",
               "<(module_root_dir)/src/ardupilot/libraries/AC_PID",
               "<(module_root_dir)/src/ardupilot/libraries/AC_Sprayer",
@@ -96,7 +97,8 @@
             },
           },
           "sources": [
-            "<!@(find <(module_root_dir)/src/ardupilot/libraries/ -type f -name *.cpp)"
+            "<!@(find <(module_root_dir)/src/ardupilot/libraries -type f -name *.cpp)",
+            "<!@(find <(module_root_dir)/src/ardupilot/libraries -type f -name *.h)"
           ],
           "defines": [
             "CONFIG_HAL_BOARD=7",
