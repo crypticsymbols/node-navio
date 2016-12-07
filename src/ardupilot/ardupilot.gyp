@@ -5,7 +5,7 @@
       'targets': [
         {
           "target_name": "ardupilot",
-          'type': 'static_library',
+          'type': 'shared_library',
           'direct_dependent_settings': {
             "cflags": [ "-fsigned-char", "-Wall", "-std=c++11" ],
             "cflags_cc": [ "-fsigned-char", "-Wall", "-std=c++11", '-O3', '-g' ],
