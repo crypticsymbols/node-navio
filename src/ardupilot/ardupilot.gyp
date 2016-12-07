@@ -96,7 +96,7 @@
             },
           },
           "sources": [
-            "<!@(find src/ardupilot/libraries/ -type f -name *.cpp)"
+            "<!@(find <(module_root_dir)/src/ardupilot/libraries/ -type f -name *.cpp)"
           ],
           "defines": [
             "CONFIG_HAL_BOARD=7",
