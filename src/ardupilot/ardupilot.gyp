@@ -14,7 +14,7 @@
             "defines": [
               "CONFIG_HAL_BOARD=7",
               "CONFIG_HAL_BOARD_SUBTYPE=1003",
-              "D_GNU_SOURCE"
+              "_GNU_SOURCE"
             ],
             'include_dirs': [
               "<(module_root_dir)/src/ardupilot/libraries/AC_AttitudeControl",
