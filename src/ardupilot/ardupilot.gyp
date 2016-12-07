@@ -147,6 +147,7 @@
             "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_PX4",
             "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_Linux",
             "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_SITL",
+            "<(module_root_dir)/src/ardupilot/libraries/AP_HAL_VRBRAIN",
             "<(module_root_dir)/src/ardupilot/libraries/AP_InertialNav",
             "<(module_root_dir)/src/ardupilot/libraries/AP_InertialSensor",
             "<(module_root_dir)/src/ardupilot/libraries/AP_L1_Control",
