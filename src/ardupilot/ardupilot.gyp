@@ -114,7 +114,7 @@
           "cflags!": [ '-fno-exceptions' ],
           "cflags_cc!": [ '-fno-exceptions' ],
           "include_dirs" : [
-            "<!@( cd <(module_root_dir)/src/ardupilot && find libraries -type d -maxdepth 2)",
+            "<!@(cd <(module_root_dir)/src/ardupilot && find libraries -type d -maxdepth 2)",
           ]
         }
       ]
