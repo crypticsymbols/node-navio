@@ -17,10 +17,7 @@ MODULES		+= drivers/stm32/adc
 MODULES		+= drivers/stm32/tone_alarm
 MODULES		+= drivers/led
 MODULES		+= drivers/px4fmu
-MODULES		+= drivers/px4io
-MODULES		+= drivers/px4flow
 MODULES		+= drivers/rgbled
-MODULES		+= drivers/oreoled
 MODULES		+= drivers/mpu6000
 MODULES		+= drivers/hmc5883
 MODULES		+= drivers/ms5611
@@ -32,9 +29,6 @@ MODULES		+= drivers/trone
 #MODULES	+= drivers/hott_telemetry
 #MODULES	+= drivers/blinkm
 #MODULES	+= modules/sensors
-MODULES		+= drivers/airspeed
-MODULES		+= drivers/ets_airspeed
-MODULES		+= drivers/meas_airspeed
 MODULES		+= drivers/mkblctrl
 MODULES		+= drivers/batt_smbus
 
@@ -51,6 +45,7 @@ MODULES		+= systemcmds/top
 MODULES		+= systemcmds/nshterm
 MODULES         += systemcmds/mtd
 MODULES         += systemcmds/ver
+MODULES         += systemcmds/otp
 
 ifneq ($(wildcard $(PX4_ROOT)/src/systemcmds/reflect),)  
 MODULES         += systemcmds/reflect

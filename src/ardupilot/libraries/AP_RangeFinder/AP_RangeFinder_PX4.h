@@ -1,4 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,9 +12,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#ifndef AP_RangeFinder_PX4_H
-#define AP_RangeFinder_PX4_H
+#pragma once
 
 #include "RangeFinder.h"
 #include "RangeFinder_Backend.h"
@@ -49,5 +46,3 @@ private:
     // try to open the PX4 driver and return its fd
     static int open_driver(void);
 };
-
-#endif // AP_RangeFinder_PX4_H

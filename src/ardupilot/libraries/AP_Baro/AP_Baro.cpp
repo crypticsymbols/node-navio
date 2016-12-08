@@ -1,4 +1,3 @@
-/// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,16 +17,26 @@
  *       APM_Baro.cpp - barometer driver
  *
  */
+#include "AP_Baro.h"
 
-#include <AP_Math.h>
-#include <AP_Common.h>
-#include <AP_Baro.h>
-#include <AP_HAL.h>
+#include <utility>
+
+#include <AP_Common/AP_Common.h>
+#include <AP_HAL/AP_HAL.h>
+#include <AP_Math/AP_Math.h>
+#include <AP_BoardConfig/AP_BoardConfig.h>
+
+#include "AP_Baro_BMP085.h"
+#include "AP_Baro_HIL.h"
+#include "AP_Baro_MS5611.h"
+#include "AP_Baro_PX4.h"
+#include "AP_Baro_qflight.h"
+#include "AP_Baro_QURT.h"
 
 extern const AP_HAL::HAL& hal;
 
 // table of user settable parameters
-const AP_Param::GroupInfo AP_Baro::var_info[] PROGMEM = {
+const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // NOTE: Index numbers 0 and 1 were for the old integer
     // ground temperature and pressure
 
@@ -36,6 +45,9 @@ const AP_Param::GroupInfo AP_Baro::var_info[] PROGMEM = {
     // @Description: calibrated ground pressure in Pascals
     // @Units: pascals
     // @Increment: 1
+    // @ReadOnly: True
+    // @Volatile: True
+    // @User: Advanced
     AP_GROUPINFO("ABS_PRESS", 2, AP_Baro, sensors[0].ground_pressure, 0),
 
     // @Param: TEMP
@@ -43,34 +55,44 @@ const AP_Param::GroupInfo AP_Baro::var_info[] PROGMEM = {
     // @Description: calibrated ground temperature in degrees Celsius
     // @Units: degrees celsius
     // @Increment: 1
+    // @ReadOnly: True
+    // @Volatile: True
+    // @User: Advanced
     AP_GROUPINFO("TEMP", 3, AP_Baro, sensors[0].ground_temperature, 0),
+
+    // index 4 reserved for old AP_Int8 version in legacy FRAM
+    //AP_GROUPINFO("ALT_OFFSET", 4, AP_Baro, _alt_offset, 0),
 
     // @Param: ALT_OFFSET
     // @DisplayName: altitude offset
     // @Description: altitude offset in meters added to barometric altitude. This is used to allow for automatic adjustment of the base barometric altitude by a ground station equipped with a barometer. The value is added to the barometric altitude read by the aircraft. It is automatically reset to 0 when the barometer is calibrated on each reboot or when a preflight calibration is performed.
     // @Units: meters
-    // @Range: -128 127
-    // @Increment: 1
-    AP_GROUPINFO("ALT_OFFSET", 4, AP_Baro, _alt_offset, 0),
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("ALT_OFFSET", 5, AP_Baro, _alt_offset, 0),
 
+    // @Param: PRIMARY
+    // @DisplayName: Primary barometer
+    // @Description: This selects which barometer will be the primary if multiple barometers are found
+    // @Values: 0:FirstBaro,1:2ndBaro,2:3rdBaro
+    // @User: Advanced
+    AP_GROUPINFO("PRIMARY", 6, AP_Baro, _primary_baro, 0),
+
+    // @Param: EXT_BUS
+    // @DisplayName: External baro bus
+    // @Description: This selects the bus number for looking for an I2C barometer
+    // @Values: -1:Disabled,0:Bus0:1:Bus1
+    // @User: Advanced
+    AP_GROUPINFO("EXT_BUS", 7, AP_Baro, _ext_bus, -1),
+    
     AP_GROUPEND
 };
 
 /*
   AP_Baro constructor
  */
-AP_Baro::AP_Baro() :
-        _num_drivers(0),
-        _num_sensors(0),
-        _primary(0),
-        _last_altitude_EAS2TAS(0.0f),
-        _EAS2TAS(0.0f),
-        _external_temperature(0.0f),
-        _last_external_temperature_ms(0),
-        _hil_mode(false)
+AP_Baro::AP_Baro()
 {
-    memset(sensors, 0, sizeof(sensors));
-
     AP_Param::setup_object_defaults(this, var_info);
 }
 
@@ -92,12 +114,12 @@ void AP_Baro::calibrate()
     // the MS5611 reads quite a long way off for the first second,
     // leading to about 1m of error if we don't wait
     for (uint8_t i = 0; i < 10; i++) {
-        uint32_t tstart = hal.scheduler->millis();
+        uint32_t tstart = AP_HAL::millis();
         do {
             update();
-            if (hal.scheduler->millis() - tstart > 500) {
-                hal.scheduler->panic(PSTR("PANIC: AP_Baro::read unsuccessful "
-                        "for more than 500ms in AP_Baro::calibrate [2]\r\n"));
+            if (AP_HAL::millis() - tstart > 500) {
+                AP_HAL::panic("PANIC: AP_Baro::read unsuccessful "
+                        "for more than 500ms in AP_Baro::calibrate [2]\r\n");
             }
             hal.scheduler->delay(10);
         } while (!healthy());
@@ -112,12 +134,12 @@ void AP_Baro::calibrate()
     const uint8_t num_samples = 5;
 
     for (uint8_t c = 0; c < num_samples; c++) {
-        uint32_t tstart = hal.scheduler->millis();
+        uint32_t tstart = AP_HAL::millis();
         do {
             update();
-            if (hal.scheduler->millis() - tstart > 500) {
-                hal.scheduler->panic(PSTR("PANIC: AP_Baro::read unsuccessful "
-                        "for more than 500ms in AP_Baro::calibrate [3]\r\n"));
+            if (AP_HAL::millis() - tstart > 500) {
+                AP_HAL::panic("PANIC: AP_Baro::read unsuccessful "
+                        "for more than 500ms in AP_Baro::calibrate [3]\r\n");
             }
         } while (!healthy());
         for (uint8_t i=0; i<_num_sensors; i++) {
@@ -144,7 +166,7 @@ void AP_Baro::calibrate()
             return;
         }
     }
-    hal.scheduler->panic(PSTR("AP_Baro: all sensors uncalibrated"));
+    AP_HAL::panic("AP_Baro: all sensors uncalibrated");
 }
 
 /*
@@ -160,6 +182,14 @@ void AP_Baro::update_calibration()
         }
         float last_temperature = sensors[i].ground_temperature;
         sensors[i].ground_temperature.set(get_calibration_temperature(i));
+
+        // don't notify the GCS too rapidly or we flood the link
+        uint32_t now = AP_HAL::millis();
+        if (now - _last_notify_ms > 10000) {
+            sensors[i].ground_pressure.notify();
+            sensors[i].ground_temperature.notify();
+            _last_notify_ms = now;
+        }
         if (fabsf(last_temperature - sensors[i].ground_temperature) > 3) {
             // reset _EAS2TAS to force it to recalculate. This happens
             // when a digital airspeed sensor comes online
@@ -174,18 +204,12 @@ float AP_Baro::get_altitude_difference(float base_pressure, float pressure) cons
 {
     float ret;
     float temp    = get_ground_temperature() + 273.15f;
-#if HAL_CPU_CLASS <= HAL_CPU_CLASS_16
-    // on slower CPUs use a less exact, but faster, calculation
-    float scaling = base_pressure / pressure;
-    ret = logf(scaling) * temp * 29.271267f;
-#else
-    // on faster CPUs use a more exact calculation
     float scaling = pressure / base_pressure;
-    
-    // This is an exact calculation that is within +-2.5m of the standard atmosphere tables
-    // in the troposphere (up to 11,000 m amsl).
-	ret = 153.8462f * temp * (1.0f - expf(0.190259f * logf(scaling)));
-#endif
+
+    // This is an exact calculation that is within +-2.5m of the standard
+    // atmosphere tables in the troposphere (up to 11,000 m amsl).
+    ret = 153.8462f * temp * (1.0f - expf(0.190259f * logf(scaling)));
+
     return ret;
 }
 
@@ -223,6 +247,9 @@ float AP_Baro::get_air_density_ratio(void)
 // note that this relies on read() being called regularly to get new data
 float AP_Baro::get_climb_rate(void)
 {
+    if (_hil.have_alt) {
+        return _hil.climb_rate;
+    }
     // we use a 7 point derivative filter on the climb rate. This seems
     // to produce somewhat reasonable results on real hardware
     return _climb_rate_filter.slope() * 1.0e3f;
@@ -235,7 +262,7 @@ float AP_Baro::get_climb_rate(void)
 void AP_Baro::set_external_temperature(float temperature)
 {
     _external_temperature = temperature;
-    _last_external_temperature_ms = hal.scheduler->millis();
+    _last_external_temperature_ms = AP_HAL::millis();
 }
 
 /*
@@ -244,7 +271,7 @@ void AP_Baro::set_external_temperature(float temperature)
 float AP_Baro::get_calibration_temperature(uint8_t instance) const
 {
     // if we have a recent external temperature then use it
-    if (_last_external_temperature_ms != 0 && hal.scheduler->millis() - _last_external_temperature_ms < 10000) {
+    if (_last_external_temperature_ms != 0 && AP_HAL::millis() - _last_external_temperature_ms < 10000) {
         return _external_temperature;
     }
     // if we don't have an external temperature then use the minimum
@@ -256,9 +283,33 @@ float AP_Baro::get_calibration_temperature(uint8_t instance) const
     if (ret > 25) {
         ret = 25;
     }
-    return ret;    
+    return ret;
 }
 
+
+bool AP_Baro::_add_backend(AP_Baro_Backend *backend)
+{
+    if (!backend) {
+        return false;
+    }
+    if (_num_drivers >= BARO_MAX_DRIVERS) {
+        AP_HAL::panic("Too many barometer drivers");
+    }
+    drivers[_num_drivers++] = backend;
+    return true;
+}
+
+/*
+  macro to add a backend with check for too many sensors
+ We don't try to start more than the maximum allowed
+ */
+#define ADD_BACKEND(backend) \
+    do { _add_backend(backend);     \
+       if (_num_drivers == BARO_MAX_DRIVERS || \
+          _num_sensors == BARO_MAX_INSTANCES) { \
+          return; \
+       } \
+    } while (0)
 
 /*
   initialise the barometer object, loading backend drivers
@@ -272,32 +323,65 @@ void AP_Baro::init(void)
     }
 
 #if HAL_BARO_DEFAULT == HAL_BARO_PX4 || HAL_BARO_DEFAULT == HAL_BARO_VRBRAIN
-    drivers[0] = new AP_Baro_PX4(*this);
-    _num_drivers = 1;
+    if (AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PX4V1) {
+#ifdef HAL_BARO_MS5611_I2C_BUS
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR))));
+#endif
+    } else if (AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PIXHAWK ||
+               AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PHMINI ||
+               AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PH2SLIM) {
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
+    } else if (AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PIXHAWK2) {
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_EXT_NAME))));
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
+    } else if (AP_BoardConfig::get_board_type() == AP_BoardConfig::PX4_BOARD_PIXRACER) {
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_INT_NAME))));
+    } else {
+        drivers[0] = new AP_Baro_PX4(*this);
+        _num_drivers = 1;
+    }
 #elif HAL_BARO_DEFAULT == HAL_BARO_HIL
     drivers[0] = new AP_Baro_HIL(*this);
     _num_drivers = 1;
 #elif HAL_BARO_DEFAULT == HAL_BARO_BMP085
-    {
-        drivers[0] = new AP_Baro_BMP085(*this);
-        _num_drivers = 1;
-    }
-#elif HAL_BARO_DEFAULT == HAL_BARO_MS5611
-    {
-        drivers[0] = new AP_Baro_MS5611(*this, new AP_SerialBus_I2C(MS5611_I2C_ADDR), false);
-        _num_drivers = 1;
-    }
+    drivers[0] = new AP_Baro_BMP085(*this,
+        std::move(hal.i2c_mgr->get_device(HAL_BARO_BMP085_BUS, HAL_BARO_BMP085_I2C_ADDR)));
+    _num_drivers = 1;
+#elif HAL_BARO_DEFAULT == HAL_BARO_MS5611_I2C
+    ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                      std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR))));
 #elif HAL_BARO_DEFAULT == HAL_BARO_MS5611_SPI
-    {
-        drivers[0] = new AP_Baro_MS5611(*this, 
-                                        new AP_SerialBus_SPI(AP_HAL::SPIDevice_MS5611, 
-                                                             AP_HAL::SPIDeviceDriver::SPI_SPEED_HIGH),
-                                        true);
-        _num_drivers = 1;
+    ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                      std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
+#elif HAL_BARO_DEFAULT == HAL_BARO_MS5607_I2C
+    ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                      std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5607_I2C_BUS, HAL_BARO_MS5607_I2C_ADDR)),
+                                      AP_Baro_MS56XX::BARO_MS5607));
+#elif HAL_BARO_DEFAULT == HAL_BARO_MS5637_I2C
+    ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                      std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5637_I2C_BUS, HAL_BARO_MS5637_I2C_ADDR)),
+                                      AP_Baro_MS56XX::BARO_MS5637));
+#elif HAL_BARO_DEFAULT == HAL_BARO_QFLIGHT
+    drivers[0] = new AP_Baro_QFLIGHT(*this);
+    _num_drivers = 1;
+#elif HAL_BARO_DEFAULT == HAL_BARO_QURT
+    drivers[0] = new AP_Baro_QURT(*this);
+    _num_drivers = 1;
+#endif
+
+    // can optionally have baro on I2C too
+    if (_ext_bus >= 0) {
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.i2c_mgr->get_device(_ext_bus, HAL_BARO_MS5611_I2C_ADDR))));
     }
-#endif    
-    if (_num_drivers == 0 || _num_sensors == 0 || drivers[0] == NULL) {
-        hal.scheduler->panic(PSTR("Baro: unable to initialise driver"));
+    
+    if (_num_drivers == 0 || _num_sensors == 0 || drivers[0] == nullptr) {
+        AP_HAL::panic("Baro: unable to initialise driver");
     }
 }
 
@@ -307,6 +391,14 @@ void AP_Baro::init(void)
  */
 void AP_Baro::update(void)
 {
+    if (fabsf(_alt_offset - _alt_offset_active) > 0.01f) {
+        // If there's more than 1cm difference then slowly slew to it via LPF.
+        // The EKF does not like step inputs so this keeps it happy.
+        _alt_offset_active = (0.95f*_alt_offset_active) + (0.05f*_alt_offset);
+    } else {
+        _alt_offset_active = _alt_offset;
+    }
+
     if (!_hil_mode) {
         for (uint8_t i=0; i<_num_drivers; i++) {
             drivers[i]->update();
@@ -315,7 +407,7 @@ void AP_Baro::update(void)
 
     // consider a sensor as healthy if it has had an update in the
     // last 0.5 seconds
-    uint32_t now = hal.scheduler->millis();
+    uint32_t now = AP_HAL::millis();
     for (uint8_t i=0; i<_num_sensors; i++) {
         sensors[i].healthy = (now - sensors[i].last_update_ms < 500) && !is_zero(sensors[i].pressure);
     }
@@ -323,30 +415,46 @@ void AP_Baro::update(void)
     for (uint8_t i=0; i<_num_sensors; i++) {
         if (sensors[i].healthy) {
             // update altitude calculation
-            if (is_zero(sensors[i].ground_pressure)) {
+            float ground_pressure = sensors[i].ground_pressure;
+            if (is_zero(ground_pressure) || isnan(ground_pressure) || isinf(ground_pressure)) {
                 sensors[i].ground_pressure = sensors[i].pressure;
             }
-            sensors[i].altitude = get_altitude_difference(sensors[i].ground_pressure, sensors[i].pressure);
+            float altitude = get_altitude_difference(sensors[i].ground_pressure, sensors[i].pressure);
             // sanity check altitude
-            sensors[i].alt_ok = !(isnan(sensors[i].altitude) || isinf(sensors[i].altitude));
+            sensors[i].alt_ok = !(isnan(altitude) || isinf(altitude));
+            if (sensors[i].alt_ok) {
+                sensors[i].altitude = altitude + _alt_offset_active;
+            }
         }
-    }
-
-    // choose primary sensor
-    _primary = 0;
-    for (uint8_t i=0; i<_num_sensors; i++) {
-        if (healthy(i)) {
-            _primary = i;
-            break;
+        if (_hil.have_alt) {
+            sensors[0].altitude = _hil.altitude;
+        }
+        if (_hil.have_last_update) {
+            sensors[0].last_update_ms = _hil.last_update_ms;
         }
     }
 
     // ensure the climb rate filter is updated
-    _climb_rate_filter.update(get_altitude(), get_last_update());
+    if (healthy()) {
+        _climb_rate_filter.update(get_altitude(), get_last_update());
+    }
+
+    // choose primary sensor
+    if (_primary_baro >= 0 && _primary_baro < _num_sensors && healthy(_primary_baro)) {
+        _primary = _primary_baro;
+    } else {
+        _primary = 0;
+        for (uint8_t i=0; i<_num_sensors; i++) {
+            if (healthy(i)) {
+                _primary = i;
+                break;
+            }
+        }
+    }
 }
 
 /*
-  call accululate on all drivers
+  call accumulate on all drivers
  */
 void AP_Baro::accumulate(void)
 {
@@ -362,7 +470,7 @@ void AP_Baro::accumulate(void)
 uint8_t AP_Baro::register_sensor(void)
 {
     if (_num_sensors >= BARO_MAX_INSTANCES) {
-        hal.scheduler->panic(PSTR("Too many barometers"));
+        AP_HAL::panic("Too many barometers");
     }
     return _num_sensors++;
 }

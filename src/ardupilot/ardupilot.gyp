@@ -5,7 +5,7 @@
       'targets': [
         {
           "target_name": "ardupilot",
-          'type': 'shared_library',
+          'type': 'none',
           'direct_dependent_settings': {
             "cflags": [ "-fsigned-char", "-Wall", "-std=c++11" ],
             "cflags_cc": [ "-fsigned-char", "-Wall", "-std=c++11", '-O3', '-g' ],
@@ -19,6 +19,11 @@
               'SKETCHBOOK="ardupilot"',
               "_GNU_SOURCE"
             ],
+            "libraries": [
+              "-lm",
+              "-lpthread",
+              "-lrt"
+            ],
             'include_dirs': [
               "<!@(cd <(module_root_dir)/src/ardupilot && find libraries -type d -maxdepth 2)",
             ],
@@ -27,31 +32,11 @@
                 '-Wl,-rpath=\$$ORIGIN',
                 '-Wl,-rpath-link=\$(builddir)'
               ],
+              'ldflags': [
+                "-L<!@(cd <(module_root_dir)/src/ardupilot && find built -type d)",
+              ],
             },
           },
-          "sources": [
-            "<!@(cd <(module_root_dir)/src/ardupilot && find libraries -type f -name *.cpp -maxdepth 3)",
-          ],
-          "defines": [
-            "CONFIG_HAL_BOARD=7",
-            'SKETCHNAME="ardupilot"',
-            'SKETCH="ardupilot"',
-            'SKETCHBOOK="ardupilot"',
-            "CONFIG_HAL_BOARD_SUBTYPE=1003",
-            "_GNU_SOURCE"
-          ],
-          "libraries": [
-            "-lm",
-            "-lpthread",
-            "-lrt"
-          ],
-          "cflags": [ "-fsigned-char", "-Wall", "-std=gnu++11" ],
-          "cflags_cc": [ "-fsigned-char", "-Wall", "-std=gnu++11", '-O3', '-g' ],
-          "cflags!": [ '-fno-exceptions', '-Wmissing-field-initializers' ],
-          "cflags_cc!": [ '-fno-exceptions', '-Wmissing-field-initializers' ],
-          "include_dirs" : [
-            "<!@(cd <(module_root_dir)/src/ardupilot && find libraries -type d -maxdepth 2)",
-          ]
         }
       ]
     }]

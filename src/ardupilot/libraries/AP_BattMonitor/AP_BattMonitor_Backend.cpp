@@ -1,4 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,8 +13,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <AP_Common.h>
-#include <AP_HAL.h>
+#include <AP_Common/AP_Common.h>
+#include <AP_HAL/AP_HAL.h>
 #include "AP_BattMonitor.h"
 #include "AP_BattMonitor_Backend.h"
 
@@ -45,4 +44,10 @@ uint8_t AP_BattMonitor_Backend::capacity_remaining_pct() const
 void AP_BattMonitor_Backend::set_capacity(uint32_t capacity)
 {
     _mon._pack_capacity[_instance] = capacity;
+}
+
+/// get capacity for this instance
+int32_t AP_BattMonitor_Backend::get_capacity() const
+{
+    return _mon.pack_capacity_mah(_instance);
 }

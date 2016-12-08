@@ -1,4 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,11 +19,10 @@
 //
 //  Swift Binary Protocol format: http://docs.swift-nav.com/
 //
+#pragma once
 
-#ifndef __AP_GPS_SBP_H__
-#define __AP_GPS_SBP_H__
-
-#include <AP_GPS.h>
+#include "AP_GPS.h"
+#include "GPS_Backend.h"
 
 class AP_GPS_SBP : public AP_GPS_Backend
 {
@@ -36,7 +34,7 @@ public:
     // Methods
     bool read();
 
-    void inject_data(uint8_t *data, uint8_t len);
+    void inject_data(const uint8_t *data, uint16_t len) override;
 
     static bool _detect(struct SBP_detect_state &state, uint8_t data);
 
@@ -164,14 +162,8 @@ private:
     // Logging to DataFlash
     // ************************************************************************
 
-    // have we written the logging headers to DataFlash?
-    static bool logging_started;
-
-    void logging_write_headers();
     void logging_log_full_update();
     void logging_log_raw_sbp(uint16_t msg_type, uint16_t sender_id, uint8_t msg_len, uint8_t *msg_buff);
    
 
 };
-
-#endif // __AP_GPS_SBP_H__

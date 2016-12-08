@@ -1,4 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,11 +20,9 @@
 //  Swift Binary Protocol format: http://docs.swift-nav.com/
 //
 
-#include <AP_GPS.h>
+#include "AP_GPS.h"
 #include "AP_GPS_SBP.h"
-#include <DataFlash.h>
-
-#if GPS_RTK_AVAILABLE
+#include <DataFlash/DataFlash.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -47,9 +44,6 @@ do {                                            \
  # define Debug(fmt, args ...)
 #endif
 
-bool AP_GPS_SBP::logging_started = false;
-
-
 AP_GPS_SBP::AP_GPS_SBP(AP_GPS &_gps, AP_GPS::GPS_State &_state,
                        AP_HAL::UARTDriver *_port) :
     AP_GPS_Backend(_gps, _state, _port),
@@ -68,7 +62,7 @@ AP_GPS_SBP::AP_GPS_SBP(AP_GPS &_gps, AP_GPS::GPS_State &_state,
     //Externally visible state
     state.status = AP_GPS::NO_FIX;
     state.have_vertical_velocity = true;
-    state.last_gps_time_ms = last_heatbeat_received_ms = hal.scheduler->millis();
+    state.last_gps_time_ms = last_heatbeat_received_ms = AP_HAL::millis();
 
 }
 
@@ -90,11 +84,11 @@ AP_GPS_SBP::read(void)
 }
 
 void 
-AP_GPS_SBP::inject_data(uint8_t *data, uint8_t len)
+AP_GPS_SBP::inject_data(const uint8_t *data, uint16_t len)
 {
 
     if (port->txspace() > len) {
-        last_injected_data_ms = hal.scheduler->millis();
+        last_injected_data_ms = AP_HAL::millis();
         port->write(data, len);
     } else {
         Debug("PIKSI: Not enough TXSPACE");
@@ -190,7 +184,7 @@ void
 AP_GPS_SBP::_sbp_process_message() {
     switch(parser_state.msg_type) {
         case SBP_HEARTBEAT_MSGTYPE:
-            last_heatbeat_received_ms = hal.scheduler->millis();
+            last_heatbeat_received_ms = AP_HAL::millis();
             break;
 
         case SBP_GPS_TIME_MSGTYPE:
@@ -219,7 +213,7 @@ AP_GPS_SBP::_sbp_process_message() {
 
         case SBP_TRACKING_STATE_MSGTYPE:
             //INTENTIONALLY BLANK
-            //Currenly unhandled, but logged after switch statement.
+            //Currently unhandled, but logged after switch statement.
             break;
 
         case SBP_IAR_STATE_MSGTYPE: {
@@ -246,7 +240,7 @@ AP_GPS_SBP::_attempt_state_update()
     //
     // If we have a full update available, save it
     //
-    uint32_t now = hal.scheduler->millis();
+    uint32_t now = AP_HAL::millis();
     bool ret = false;
 
     if (now - last_heatbeat_received_ms > SBP_TIMEOUT_HEATBEAT) {
@@ -277,10 +271,7 @@ AP_GPS_SBP::_attempt_state_update()
         float ground_vector_sq = state.velocity[0]*state.velocity[0] + state.velocity[1]*state.velocity[1];
         state.ground_speed = safe_sqrt(ground_vector_sq);
 
-        state.ground_course_cd = (int32_t) 100*ToDeg(atan2f(state.velocity[1], state.velocity[0]));
-        if (state.ground_course_cd < 0) {
-          state.ground_course_cd += 36000;
-        }
+        state.ground_course = wrap_360(degrees(atan2f(state.velocity[1], state.velocity[0])));
 
         // Update position state
 
@@ -392,82 +383,17 @@ AP_GPS_SBP::_detect(struct SBP_detect_state &state, uint8_t data)
 
 #if SBP_HW_LOGGING
 
-#define LOG_MSG_SBPHEALTH 202
-#define LOG_MSG_SBPLLH 203
-#define LOG_MSG_SBPBASELINE 204
-#define LOG_MSG_SBPTRACKING1 205
-#define LOG_MSG_SBPTRACKING2 206
-
-#define LOG_MSG_SBPRAW1 207
-#define LOG_MSG_SBPRAW2 208
-
-struct PACKED log_SbpLLH {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    uint32_t tow;
-    int32_t  lat;
-    int32_t  lon;
-    int32_t  alt;
-    uint8_t  n_sats;
-    uint8_t  flags;
-};
-
-struct PACKED log_SbpHealth {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    uint32_t crc_error_counter;
-    uint32_t last_injected_data_ms;
-    uint32_t last_iar_num_hypotheses;
-};
-
-struct PACKED log_SbpRAW1 {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    uint16_t msg_type;
-    uint16_t sender_id;
-    uint8_t msg_len;
-    uint8_t data1[64];
-};
-
-struct PACKED log_SbpRAW2 {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    uint16_t msg_type;
-    uint8_t data2[192];
-};
-
-
-static const struct LogStructure sbp_log_structures[] PROGMEM = {
-    { LOG_MSG_SBPHEALTH, sizeof(log_SbpHealth),
-      "SBPH", "QIII",   "TimeUS,CrcError,LastInject,IARhyp" },
-    { LOG_MSG_SBPRAW1, sizeof(log_SbpRAW1),
-      "SBR1", "QHHBZ",      "TimeUS,msg_type,sender_id,msg_len,d1" },
-    { LOG_MSG_SBPRAW2, sizeof(log_SbpRAW2),
-      "SBR2", "QHZZZ",      "TimeUS,msg_type,d2,d3,d4" }
-};
-
-void
-AP_GPS_SBP::logging_write_headers(void)
-{
-    if (!logging_started) {
-        logging_started = true;
-        gps._DataFlash->AddLogFormats(sbp_log_structures, sizeof(sbp_log_structures) / sizeof(LogStructure));
-    }
-}
-
 void 
 AP_GPS_SBP::logging_log_full_update()
 {
 
-    if (gps._DataFlash == NULL || !gps._DataFlash->logging_started()) {
+    if (gps._DataFlash == nullptr || !gps._DataFlash->logging_started()) {
       return;
     }
 
-    logging_write_headers();
-
     struct log_SbpHealth pkt = {
         LOG_PACKET_HEADER_INIT(LOG_MSG_SBPHEALTH),
-        time_us                    : hal.scheduler->micros64(),
+        time_us                    : AP_HAL::micros64(),
         crc_error_counter          : crc_error_counter,
         last_injected_data_ms      : last_injected_data_ms,
         last_iar_num_hypotheses    : last_iar_num_hypotheses,
@@ -482,7 +408,7 @@ AP_GPS_SBP::logging_log_raw_sbp(uint16_t msg_type,
         uint8_t msg_len, 
         uint8_t *msg_buff) {
 
-    if (gps._DataFlash == NULL || !gps._DataFlash->logging_started()) {
+    if (gps._DataFlash == nullptr || !gps._DataFlash->logging_started()) {
       return;
     }
 
@@ -491,9 +417,7 @@ AP_GPS_SBP::logging_log_raw_sbp(uint16_t msg_type,
         return;
     }
 
-    logging_write_headers();
-
-    uint64_t time_us = hal.scheduler->micros64();
+    uint64_t time_us = AP_HAL::micros64();
 
     struct log_SbpRAW1 pkt = {
         LOG_PACKET_HEADER_INIT(LOG_MSG_SBPRAW1),
@@ -502,7 +426,7 @@ AP_GPS_SBP::logging_log_raw_sbp(uint16_t msg_type,
         sender_id       : sender_id,
         msg_len         : msg_len,
     };
-    memcpy(pkt.data1, msg_buff, min(msg_len,64)); 
+    memcpy(pkt.data1, msg_buff, MIN(msg_len,64)); 
     gps._DataFlash->WriteBlock(&pkt, sizeof(pkt));    
 
     if (msg_len > 64) {
@@ -521,5 +445,3 @@ AP_GPS_SBP::logging_log_raw_sbp(uint16_t msg_type,
 
 
 #endif // SBP_HW_LOGGING
-
-#endif // GPS_RTK_AVAILABLE

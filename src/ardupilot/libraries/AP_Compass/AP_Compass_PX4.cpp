@@ -1,4 +1,3 @@
-/// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,7 +19,7 @@
  */
 
 
-#include <AP_HAL.h>
+#include <AP_HAL/AP_HAL.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
 #include "AP_Compass_PX4.h"
@@ -52,12 +51,12 @@ AP_Compass_PX4::AP_Compass_PX4(Compass &compass):
 AP_Compass_Backend *AP_Compass_PX4::detect(Compass &compass)
 {
     AP_Compass_PX4 *sensor = new AP_Compass_PX4(compass);
-    if (sensor == NULL) {
-        return NULL;
+    if (sensor == nullptr) {
+        return nullptr;
     }
     if (!sensor->init()) {
         delete sensor;
-        return NULL;
+        return nullptr;
     }
     return sensor;
 }
@@ -75,7 +74,6 @@ bool AP_Compass_PX4::init(void)
         }
     }    
 	if (_num_sensors == 0) {
-        hal.console->printf("Unable to open " MAG_BASE_DEVICE_PATH"0" "\n");
         return false;
 	}
 
@@ -95,6 +93,7 @@ bool AP_Compass_PX4::init(void)
         set_external(_instance[i], ioctl(_mag_fd[i], MAGIOCGEXTERNAL, 0) > 0);
         _count[i] = 0;
         _sum[i].zero();
+
     }
 
     // give the driver a chance to run, and gather one sample
@@ -113,13 +112,13 @@ void AP_Compass_PX4::read(void)
     accumulate();
 
     for (uint8_t i=0; i<_num_sensors; i++) {
+        uint8_t frontend_instance = _instance[i];
         // avoid division by zero if we haven't received any mag reports
         if (_count[i] == 0) continue;
 
         _sum[i] /= _count[i];
-        _sum[i] *= 1000;
 
-        publish_field(_sum[i], _instance[i]);
+        publish_filtered_field(_sum[i], frontend_instance);
     
         _sum[i].zero();
         _count[i] = 0;
@@ -130,10 +129,27 @@ void AP_Compass_PX4::accumulate(void)
 {
     struct mag_report mag_report;
     for (uint8_t i=0; i<_num_sensors; i++) {
+        uint8_t frontend_instance = _instance[i];
         while (::read(_mag_fd[i], &mag_report, sizeof(mag_report)) == sizeof(mag_report) &&
                mag_report.timestamp != _last_timestamp[i]) {
-            _sum[i] += Vector3f(mag_report.x, mag_report.y, mag_report.z);
+
+            uint32_t time_us = (uint32_t)mag_report.timestamp;
+            // get raw_field - sensor frame, uncorrected
+            Vector3f raw_field = Vector3f(mag_report.x, mag_report.y, mag_report.z)*1.0e3f;
+
+            // rotate raw_field from sensor frame to body frame
+            rotate_field(raw_field, frontend_instance);
+
+            // publish raw_field (uncorrected point sample) for calibration use
+            publish_raw_field(raw_field, time_us, frontend_instance);
+
+            // correct raw_field for known errors
+            correct_field(raw_field, frontend_instance);
+
+            // accumulate into averaging filter
+            _sum[i] += raw_field;
             _count[i]++;
+
             _last_timestamp[i] = mag_report.timestamp;
         }
     }

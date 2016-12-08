@@ -1,13 +1,7 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
-
 #include "Copter.h"
+#include "version.h"
 
-// default sensors are present and healthy: gyro, accelerometer, barometer, rate_control, attitude_stabilization, yaw_position, altitude control, x/y position control, motor_control
-#define MAVLINK_SENSOR_PRESENT_DEFAULT (MAV_SYS_STATUS_SENSOR_3D_GYRO | MAV_SYS_STATUS_SENSOR_3D_ACCEL | MAV_SYS_STATUS_SENSOR_ABSOLUTE_PRESSURE | MAV_SYS_STATUS_SENSOR_ANGULAR_RATE_CONTROL | MAV_SYS_STATUS_SENSOR_ATTITUDE_STABILIZATION | MAV_SYS_STATUS_SENSOR_YAW_POSITION | MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL | MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL | MAV_SYS_STATUS_SENSOR_MOTOR_OUTPUTS | MAV_SYS_STATUS_AHRS)
-
-// check if a message will fit in the payload space available
-#define HAVE_PAYLOAD_SPACE(chan, id) (comm_get_txspace(chan) >= MAVLINK_NUM_NON_PAYLOAD_BYTES+MAVLINK_MSG_ID_ ## id ## _LEN)
-#define CHECK_PAYLOAD_SIZE(id) if (txspace < MAVLINK_NUM_NON_PAYLOAD_BYTES+MAVLINK_MSG_ID_ ## id ## _LEN) return false
+#include "GCS_Mavlink.h"
 
 void Copter::gcs_send_heartbeat(void)
 {
@@ -17,6 +11,7 @@ void Copter::gcs_send_heartbeat(void)
 void Copter::gcs_send_deferred(void)
 {
     gcs_send_message(MSG_RETRY_DEFERRED);
+    GCS_MAVLINK::service_statustext();
 }
 
 /*
@@ -36,7 +31,7 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
     uint32_t custom_mode = control_mode;
 
     // set system as critical if any failsafe have triggered
-    if (failsafe.radio || failsafe.battery || failsafe.gcs || failsafe.ekf)  {
+    if (failsafe.radio || failsafe.battery || failsafe.gcs || failsafe.ekf || failsafe.terrain || failsafe.adsb)  {
         system_status = MAV_STATE_CRITICAL;
     }
 
@@ -53,6 +48,7 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
     case AUTO:
     case RTL:
     case LOITER:
+    case AVOID_ADSB:
     case GUIDED:
     case CIRCLE:
     case POSHOLD:
@@ -61,6 +57,8 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
         // note that MAV_MODE_FLAG_AUTO_ENABLED does not match what
         // APM does in any mode, as that is defined as "system finds its own goal
         // positions", which APM does not currently do
+        break;
+    default:
         break;
     }
 
@@ -80,29 +78,10 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
     // indicate we have set a custom mode
     base_mode |= MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
 
-    mavlink_msg_heartbeat_send(
-        chan,
-#if (FRAME_CONFIG == QUAD_FRAME)
-        MAV_TYPE_QUADROTOR,
-#elif (FRAME_CONFIG == TRI_FRAME)
-        MAV_TYPE_TRICOPTER,
-#elif (FRAME_CONFIG == HEXA_FRAME || FRAME_CONFIG == Y6_FRAME)
-        MAV_TYPE_HEXAROTOR,
-#elif (FRAME_CONFIG == OCTA_FRAME || FRAME_CONFIG == OCTA_QUAD_FRAME)
-        MAV_TYPE_OCTOROTOR,
-#elif (FRAME_CONFIG == HELI_FRAME)
-        MAV_TYPE_HELICOPTER,
-#elif (FRAME_CONFIG == SINGLE_FRAME)  //because mavlink did not define a singlecopter, we use a rocket
-        MAV_TYPE_ROCKET,
-#elif (FRAME_CONFIG == COAX_FRAME)  //because mavlink did not define a singlecopter, we use a rocket
-        MAV_TYPE_ROCKET,
-#else
-  #error Unrecognised frame type
-#endif
-        MAV_AUTOPILOT_ARDUPILOTMEGA,
-        base_mode,
-        custom_mode,
-        system_status);
+    gcs[chan-MAVLINK_COMM_0].send_heartbeat(FRAME_MAV_TYPE,
+                                            base_mode,
+                                            custom_mode,
+                                            system_status);
 }
 
 NOINLINE void Copter::send_attitude(mavlink_channel_t chan)
@@ -129,92 +108,6 @@ NOINLINE void Copter::send_limits_status(mavlink_channel_t chan)
 
 NOINLINE void Copter::send_extended_status1(mavlink_channel_t chan)
 {
-    uint32_t control_sensors_present;
-    uint32_t control_sensors_enabled;
-    uint32_t control_sensors_health;
-
-    // default sensors present
-    control_sensors_present = MAVLINK_SENSOR_PRESENT_DEFAULT;
-
-    // first what sensors/controllers we have
-    if (g.compass_enabled) {
-        control_sensors_present |= MAV_SYS_STATUS_SENSOR_3D_MAG; // compass present
-    }
-    if (gps.status() > AP_GPS::NO_GPS) {
-        control_sensors_present |= MAV_SYS_STATUS_SENSOR_GPS;
-    }
-#if OPTFLOW == ENABLED
-    if (optflow.enabled()) {
-        control_sensors_present |= MAV_SYS_STATUS_SENSOR_OPTICAL_FLOW;
-    }
-#endif
-    if (ap.rc_receiver_present) {
-        control_sensors_present |= MAV_SYS_STATUS_SENSOR_RC_RECEIVER;
-    }
-
-    // all present sensors enabled by default except altitude and position control and motors which we will set individually
-    control_sensors_enabled = control_sensors_present & (~MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL &
-                                                         ~MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL &
-                                                         ~MAV_SYS_STATUS_SENSOR_MOTOR_OUTPUTS);
-
-    switch (control_mode) {
-    case ALT_HOLD:
-    case AUTO:
-    case GUIDED:
-    case LOITER:
-    case RTL:
-    case CIRCLE:
-    case LAND:
-    case OF_LOITER:
-    case POSHOLD:
-    case BRAKE:
-        control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL;
-        control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL;
-        break;
-    case SPORT:
-        control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL;
-        break;
-    }
-
-    // set motors outputs as enabled if safety switch is not disarmed (i.e. either NONE or ARMED)
-    if (hal.util->safety_switch_state() != AP_HAL::Util::SAFETY_DISARMED) {
-        control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_MOTOR_OUTPUTS;
-    }
-
-    // default to all healthy except baro, compass, gps and receiver which we set individually
-    control_sensors_health = control_sensors_present & ~(MAV_SYS_STATUS_SENSOR_ABSOLUTE_PRESSURE |
-                                                         MAV_SYS_STATUS_SENSOR_3D_MAG |
-                                                         MAV_SYS_STATUS_SENSOR_GPS |
-                                                         MAV_SYS_STATUS_SENSOR_RC_RECEIVER);
-    if (barometer.all_healthy()) {
-        control_sensors_health |= MAV_SYS_STATUS_SENSOR_ABSOLUTE_PRESSURE;
-    }
-    if (g.compass_enabled && compass.healthy() && ahrs.use_compass()) {
-        control_sensors_health |= MAV_SYS_STATUS_SENSOR_3D_MAG;
-    }
-    if (gps.status() > AP_GPS::NO_GPS) {
-        control_sensors_health |= MAV_SYS_STATUS_SENSOR_GPS;
-    }
-#if OPTFLOW == ENABLED
-    if (optflow.healthy()) {
-        control_sensors_health |= MAV_SYS_STATUS_SENSOR_OPTICAL_FLOW;
-    }
-#endif
-    if (ap.rc_receiver_present && !failsafe.radio) {
-        control_sensors_health |= MAV_SYS_STATUS_SENSOR_RC_RECEIVER;
-    }
-    if (!ins.get_gyro_health_all() || !ins.gyro_calibrated_ok_all()) {
-        control_sensors_health &= ~MAV_SYS_STATUS_SENSOR_3D_GYRO;
-    }
-    if (!ins.get_accel_health_all()) {
-        control_sensors_health &= ~MAV_SYS_STATUS_SENSOR_3D_ACCEL;
-    }
-
-    if (ahrs.initialised() && !ahrs.healthy()) {
-        // AHRS subsystem is unhealthy
-        control_sensors_health &= ~MAV_SYS_STATUS_AHRS;
-    }
-
     int16_t battery_current = -1;
     int8_t battery_remaining = -1;
 
@@ -223,39 +116,8 @@ NOINLINE void Copter::send_extended_status1(mavlink_channel_t chan)
         battery_current = battery.current_amps() * 100;
     }
 
-#if AP_TERRAIN_AVAILABLE
-    switch (terrain.status()) {
-    case AP_Terrain::TerrainStatusDisabled:
-        break;
-    case AP_Terrain::TerrainStatusUnhealthy:
-        // To-Do: restore unhealthy terrain status reporting once terrain is used in copter
-        //control_sensors_present |= MAV_SYS_STATUS_TERRAIN;
-        //control_sensors_enabled |= MAV_SYS_STATUS_TERRAIN;
-        //break;
-    case AP_Terrain::TerrainStatusOK:
-        control_sensors_present |= MAV_SYS_STATUS_TERRAIN;
-        control_sensors_enabled |= MAV_SYS_STATUS_TERRAIN;
-        control_sensors_health  |= MAV_SYS_STATUS_TERRAIN;
-        break;
-    }
-#endif
-
-#if CONFIG_SONAR == ENABLED
-    if (sonar.num_sensors() > 0) {
-        control_sensors_present |= MAV_SYS_STATUS_SENSOR_LASER_POSITION;
-        control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_LASER_POSITION;
-        if (sonar.has_data()) {
-            control_sensors_health |= MAV_SYS_STATUS_SENSOR_LASER_POSITION;
-        }
-    }
-#endif
-
-    if (!ap.initialised || ins.calibrating()) {
-        // while initialising the gyros and accels are not enabled
-        control_sensors_enabled &= ~(MAV_SYS_STATUS_SENSOR_3D_GYRO | MAV_SYS_STATUS_SENSOR_3D_ACCEL);
-        control_sensors_health &= ~(MAV_SYS_STATUS_SENSOR_3D_GYRO | MAV_SYS_STATUS_SENSOR_3D_ACCEL);
-    }
-
+    update_sensor_status_flags();
+    
     mavlink_msg_sys_status_send(
         chan,
         control_sensors_present,
@@ -268,7 +130,6 @@ NOINLINE void Copter::send_extended_status1(mavlink_channel_t chan)
         0, // comm drops %,
         0, // comm drops in pkts,
         0, 0, 0, 0);
-
 }
 
 void NOINLINE Copter::send_location(mavlink_channel_t chan)
@@ -300,7 +161,7 @@ void NOINLINE Copter::send_location(mavlink_channel_t chan)
 
 void NOINLINE Copter::send_nav_controller_output(mavlink_channel_t chan)
 {
-    const Vector3f &targets = attitude_control.angle_ef_targets();
+    const Vector3f &targets = attitude_control.get_att_target_euler_cd();
     mavlink_msg_nav_controller_output_send(
         chan,
         targets.x / 1.0e2f,
@@ -326,7 +187,7 @@ void NOINLINE Copter::send_hwstatus(mavlink_channel_t chan)
     mavlink_msg_hwstatus_send(
         chan,
         hal.analogin->board_voltage()*1000,
-        hal.i2c->lockup_count());
+        0);
 }
 
 void NOINLINE Copter::send_servo_out(mavlink_channel_t chan)
@@ -340,10 +201,10 @@ void NOINLINE Copter::send_servo_out(mavlink_channel_t chan)
         chan,
         millis(),
         0, // port 0
-        g.rc_1.servo_out,
-        g.rc_2.servo_out,
-        g.rc_3.radio_out,
-        g.rc_4.servo_out,
+        g.rc_1.get_servo_out(),
+        g.rc_2.get_servo_out(),
+        g.rc_3.get_radio_out(),
+        g.rc_4.get_servo_out(),
         0,
         0,
         0,
@@ -354,10 +215,10 @@ void NOINLINE Copter::send_servo_out(mavlink_channel_t chan)
         chan,
         millis(),
         0,         // port 0
-        g.rc_1.servo_out,
-        g.rc_2.servo_out,
-        g.rc_3.radio_out,
-        g.rc_4.servo_out,
+        g.rc_1.get_servo_out(),
+        g.rc_2.get_servo_out(),
+        g.rc_3.get_radio_out(),
+        g.rc_4.get_servo_out(),
         10000 * g.rc_1.norm_output(),
         10000 * g.rc_2.norm_output(),
         10000 * g.rc_3.norm_output(),
@@ -367,30 +228,14 @@ void NOINLINE Copter::send_servo_out(mavlink_channel_t chan)
 #endif // HIL_MODE
 }
 
-void NOINLINE Copter::send_radio_out(mavlink_channel_t chan)
-{
-    mavlink_msg_servo_output_raw_send(
-        chan,
-        micros(),
-        0,     // port
-        hal.rcout->read(0),
-        hal.rcout->read(1),
-        hal.rcout->read(2),
-        hal.rcout->read(3),
-        hal.rcout->read(4),
-        hal.rcout->read(5),
-        hal.rcout->read(6),
-        hal.rcout->read(7));
-}
-
 void NOINLINE Copter::send_vfr_hud(mavlink_channel_t chan)
 {
     mavlink_msg_vfr_hud_send(
         chan,
         gps.ground_speed(),
-        gps.ground_speed(),
+        ahrs.groundspeed(),
         (ahrs.yaw_sensor / 100) % 360,
-        (int16_t)(motors.get_throttle())/10,
+        (int16_t)(motors.get_throttle() * 100),
         current_loc.alt / 100.0f,
         climb_rate / 100.0f);
 }
@@ -400,19 +245,69 @@ void NOINLINE Copter::send_current_waypoint(mavlink_channel_t chan)
     mavlink_msg_mission_current_send(chan, mission.get_current_nav_index());
 }
 
-#if CONFIG_SONAR == ENABLED
+#if RANGEFINDER_ENABLED == ENABLED
 void NOINLINE Copter::send_rangefinder(mavlink_channel_t chan)
 {
-    // exit immediately if sonar is disabled
-    if (!sonar.has_data()) {
+    // exit immediately if rangefinder is disabled
+    if (!rangefinder.has_data()) {
         return;
     }
     mavlink_msg_rangefinder_send(
             chan,
-            sonar.distance_cm() * 0.01f,
-            sonar.voltage_mv() * 0.001f);
+            rangefinder.distance_cm() * 0.01f,
+            rangefinder.voltage_mv() * 0.001f);
 }
 #endif
+
+void NOINLINE Copter::send_proximity(mavlink_channel_t chan, uint16_t count_max)
+{
+#if PROXIMITY_ENABLED == ENABLED
+    // return immediately if no proximity sensor is present
+    if (g2.proximity.get_status() == AP_Proximity::Proximity_NotConnected) {
+        return;
+    }
+
+    // return immediately if no tx buffer room to send messages
+    if (count_max == 0) {
+        return;
+    }
+
+    // send at most 8 distances
+    if (count_max > 8) {
+        count_max = 8;
+    }
+
+    // send known distances
+    AP_Proximity::Proximity_Distance_Array dist_array;
+    if (g2.proximity.get_distances(dist_array)) {
+        for (uint8_t i=0; i<count_max; i++) {
+            mavlink_msg_distance_sensor_send(
+                chan,
+                AP_HAL::millis(),               //  time since system boot
+                (uint16_t)(g2.proximity.distance_min() * 100),  // minimum distance the sensor can measure in centimeters
+                (uint16_t)(g2.proximity.distance_max() * 100),  // maximum distance the sensor can measure in centimeters
+                (uint16_t)(dist_array.distance[i] * 100),   // current distance reading (in cm?)
+                MAV_DISTANCE_SENSOR_LASER,      // type from MAV_DISTANCE_SENSOR enum
+                0,                              // onboard ID of the sensor
+                dist_array.orientation[i],      //  direction the sensor faces from MAV_SENSOR_ORIENTATION enum
+                1);                             // Measurement covariance in centimeters, 0 for unknown / invalid readings
+        }
+    }
+#endif
+}
+
+/*
+  send RPM packet
+ */
+void NOINLINE Copter::send_rpm(mavlink_channel_t chan)
+{
+    if (rpm_sensor.enabled(0) || rpm_sensor.enabled(1)) {
+        mavlink_msg_rpm_send(
+            chan,
+            rpm_sensor.get_rpm(0),
+            rpm_sensor.get_rpm(1));
+    }
+}
 
 
 /*
@@ -422,7 +317,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
 {
     const Vector3f &gyro = ahrs.get_gyro();
     if (g.gcs_pid_mask & 1) {
-        const DataFlash_Class::PID_Info &pid_info = g.pid_rate_roll.get_pid_info();
+        const DataFlash_Class::PID_Info &pid_info = attitude_control.get_rate_roll_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_ROLL, 
                                     pid_info.desired*0.01f,
                                     degrees(gyro.x),
@@ -435,7 +330,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
         }
     }
     if (g.gcs_pid_mask & 2) {
-        const DataFlash_Class::PID_Info &pid_info = g.pid_rate_pitch.get_pid_info();
+        const DataFlash_Class::PID_Info &pid_info = attitude_control.get_rate_pitch_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_PITCH, 
                                     pid_info.desired*0.01f,
                                     degrees(gyro.y),
@@ -448,7 +343,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
         }
     }
     if (g.gcs_pid_mask & 4) {
-        const DataFlash_Class::PID_Info &pid_info = g.pid_rate_yaw.get_pid_info();
+        const DataFlash_Class::PID_Info &pid_info = attitude_control.get_rate_yaw_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_YAW, 
                                     pid_info.desired*0.01f,
                                     degrees(gyro.z),
@@ -475,39 +370,15 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
     }
 }
 
-
-void NOINLINE Copter::send_statustext(mavlink_channel_t chan)
+uint32_t GCS_MAVLINK_Copter::telem_delay() const
 {
-    mavlink_statustext_t *s = &gcs[chan-MAVLINK_COMM_0].pending_status;
-    mavlink_msg_statustext_send(
-        chan,
-        s->severity,
-        s->text);
+    return (uint32_t)(copter.g.telem_delay);
 }
-
-// are we still delaying telemetry to try to avoid Xbee bricking?
-bool Copter::telemetry_delayed(mavlink_channel_t chan)
-{
-    uint32_t tnow = millis() >> 10;
-    if (tnow > (uint32_t)g.telem_delay) {
-        return false;
-    }
-    if (chan == MAVLINK_COMM_0 && hal.gpio->usb_connected()) {
-        // this is USB telemetry, so won't be an Xbee
-        return false;
-    }
-    // we're either on the 2nd UART, or no USB cable is connected
-    // we need to delay telemetry by the TELEM_DELAY time
-    return true;
-}
-
 
 // try to send a message, return false if it won't fit in the serial tx buffer
-bool GCS_MAVLINK::try_send_message(enum ap_message id)
+bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
 {
-    uint16_t txspace = comm_get_txspace(chan);
-
-    if (copter.telemetry_delayed(chan)) {
+    if (telemetry_delayed(chan)) {
         return false;
     }
 
@@ -524,7 +395,7 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
     switch(id) {
     case MSG_HEARTBEAT:
         CHECK_PAYLOAD_SIZE(HEARTBEAT);
-        copter.gcs[chan-MAVLINK_COMM_0].last_heartbeat_time = hal.scheduler->millis();
+        last_heartbeat_time = AP_HAL::millis();
         copter.send_heartbeat(chan);
         break;
 
@@ -535,13 +406,13 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
             CHECK_PAYLOAD_SIZE(SYS_STATUS);
             copter.send_extended_status1(chan);
             CHECK_PAYLOAD_SIZE(POWER_STATUS);
-            copter.gcs[chan-MAVLINK_COMM_0].send_power_status();
+            send_power_status();
         }
         break;
 
     case MSG_EXTENDED_STATUS2:
         CHECK_PAYLOAD_SIZE(MEMINFO);
-        copter.gcs[chan-MAVLINK_COMM_0].send_meminfo();
+        send_meminfo();
         break;
 
     case MSG_ATTITUDE:
@@ -565,11 +436,11 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
         break;
 
     case MSG_GPS_RAW:
-        return copter.gcs[chan-MAVLINK_COMM_0].send_gps_raw(copter.gps);
+        return send_gps_raw(copter.gps);
 
     case MSG_SYSTEM_TIME:
         CHECK_PAYLOAD_SIZE(SYSTEM_TIME);
-        copter.gcs[chan-MAVLINK_COMM_0].send_system_time(copter.gps);
+        send_system_time(copter.gps);
         break;
 
     case MSG_SERVO_OUT:
@@ -578,13 +449,13 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
         break;
 
     case MSG_RADIO_IN:
-        CHECK_PAYLOAD_SIZE(RC_CHANNELS_RAW);
-        copter.gcs[chan-MAVLINK_COMM_0].send_radio_in(copter.receiver_rssi);
+        CHECK_PAYLOAD_SIZE(RC_CHANNELS);
+        send_radio_in(copter.receiver_rssi);
         break;
 
     case MSG_RADIO_OUT:
         CHECK_PAYLOAD_SIZE(SERVO_OUTPUT_RAW);
-        copter.send_radio_out(chan);
+        send_servo_output_raw(false);
         break;
 
     case MSG_VFR_HUD:
@@ -594,17 +465,17 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 
     case MSG_RAW_IMU1:
         CHECK_PAYLOAD_SIZE(RAW_IMU);
-        copter.gcs[chan-MAVLINK_COMM_0].send_raw_imu(copter.ins, copter.compass);
+        send_raw_imu(copter.ins, copter.compass);
         break;
 
     case MSG_RAW_IMU2:
         CHECK_PAYLOAD_SIZE(SCALED_PRESSURE);
-        copter.gcs[chan-MAVLINK_COMM_0].send_scaled_pressure(copter.barometer);
+        send_scaled_pressure(copter.barometer);
         break;
 
     case MSG_RAW_IMU3:
         CHECK_PAYLOAD_SIZE(SENSOR_OFFSETS);
-        copter.gcs[chan-MAVLINK_COMM_0].send_sensor_offsets(copter.ins, copter.compass, copter.barometer);
+        send_sensor_offsets(copter.ins, copter.compass, copter.barometer);
         break;
 
     case MSG_CURRENT_WAYPOINT:
@@ -614,23 +485,30 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 
     case MSG_NEXT_PARAM:
         CHECK_PAYLOAD_SIZE(PARAM_VALUE);
-        copter.gcs[chan-MAVLINK_COMM_0].queued_param_send();
+        queued_param_send();
         break;
 
     case MSG_NEXT_WAYPOINT:
         CHECK_PAYLOAD_SIZE(MISSION_REQUEST);
-        copter.gcs[chan-MAVLINK_COMM_0].queued_waypoint_send();
+        queued_waypoint_send();
         break;
 
     case MSG_RANGEFINDER:
-#if CONFIG_SONAR == ENABLED
+#if RANGEFINDER_ENABLED == ENABLED
         CHECK_PAYLOAD_SIZE(RANGEFINDER);
         copter.send_rangefinder(chan);
 #endif
+        CHECK_PAYLOAD_SIZE(DISTANCE_SENSOR);
+        copter.send_proximity(chan, comm_get_txspace(chan) / (packet_overhead()+9));
+        break;
+
+    case MSG_RPM:
+        CHECK_PAYLOAD_SIZE(RPM);
+        copter.send_rpm(chan);
         break;
 
     case MSG_TERRAIN:
-#if AP_TERRAIN_AVAILABLE
+#if AP_TERRAIN_AVAILABLE && AC_TERRAIN
         CHECK_PAYLOAD_SIZE(TERRAIN_REQUEST);
         copter.terrain.send_request(chan);
 #endif
@@ -644,9 +522,8 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
         break;
 
     case MSG_STATUSTEXT:
-        CHECK_PAYLOAD_SIZE(STATUSTEXT);
-        copter.send_statustext(chan);
-        break;
+        // depreciated, use GCS_MAVLINK::send_statustext*
+        return false;
 
     case MSG_LIMITS_STATUS:
 #if AC_FENCE == ENABLED
@@ -657,7 +534,7 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 
     case MSG_AHRS:
         CHECK_PAYLOAD_SIZE(AHRS);
-        copter.gcs[chan-MAVLINK_COMM_0].send_ahrs(copter.ahrs);
+        send_ahrs(copter.ahrs);
         break;
 
     case MSG_SIMSTATE:
@@ -666,7 +543,7 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
         copter.send_simstate(chan);
 #endif
         CHECK_PAYLOAD_SIZE(AHRS2);
-        copter.gcs[chan-MAVLINK_COMM_0].send_ahrs2(copter.ahrs);
+        send_ahrs2(copter.ahrs);
         break;
 
     case MSG_HWSTATUS:
@@ -683,13 +560,13 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 
     case MSG_BATTERY2:
         CHECK_PAYLOAD_SIZE(BATTERY2);
-        copter.gcs[chan-MAVLINK_COMM_0].send_battery2(copter.battery);
+        send_battery2(copter.battery);
         break;
 
     case MSG_OPTICAL_FLOW:
 #if OPTFLOW == ENABLED
         CHECK_PAYLOAD_SIZE(OPTICAL_FLOW);
-        copter.gcs[chan-MAVLINK_COMM_0].send_opticalflow(copter.ahrs, copter.optflow);
+        send_opticalflow(copter.ahrs, copter.optflow);
 #endif
         break;
 
@@ -702,11 +579,12 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 
     case MSG_EKF_STATUS_REPORT:
         CHECK_PAYLOAD_SIZE(EKF_STATUS_REPORT);
-        copter.ahrs.get_NavEKF().send_status_report(chan);
+        copter.ahrs.send_ekf_status_report(chan);
         break;
 
     case MSG_FENCE_STATUS:
     case MSG_WIND:
+    case MSG_POSITION_TARGET_GLOBAL_INT:
         // unused
         break;
 
@@ -720,15 +598,33 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
         send_vibration(copter.ins);
         break;
 
+    case MSG_MISSION_ITEM_REACHED:
+        CHECK_PAYLOAD_SIZE(MISSION_ITEM_REACHED);
+        mavlink_msg_mission_item_reached_send(chan, mission_item_reached_index);
+        break;
+
     case MSG_RETRY_DEFERRED:
         break; // just here to prevent a warning
+
+    case MSG_MAG_CAL_PROGRESS:
+        copter.compass.send_mag_cal_progress(chan);
+        break;
+
+    case MSG_MAG_CAL_REPORT:
+        copter.compass.send_mag_cal_report(chan);
+        break;
+
+    case MSG_ADSB_VEHICLE:
+        CHECK_PAYLOAD_SIZE(ADSB_VEHICLE);
+        copter.adsb.send_adsb_vehicle(chan);
+        break;
     }
 
     return true;
 }
 
 
-const AP_Param::GroupInfo GCS_MAVLINK::var_info[] PROGMEM = {
+const AP_Param::GroupInfo GCS_MAVLINK::var_info[] = {
     // @Param: RAW_SENS
     // @DisplayName: Raw sensor stream rate
     // @Description: Stream rate of RAW_IMU, SCALED_IMU2, SCALED_PRESSURE, and SENSOR_OFFSETS to ground station
@@ -749,7 +645,7 @@ const AP_Param::GroupInfo GCS_MAVLINK::var_info[] PROGMEM = {
 
     // @Param: RC_CHAN
     // @DisplayName: RC Channel stream rate to ground station
-    // @Description: Stream rate of SERVO_OUTPUT_RAW and RC_CHANNELS_RAW to ground station
+    // @Description: Stream rate of SERVO_OUTPUT_RAW and RC_CHANNELS to ground station
     // @Units: Hz
     // @Range: 0 10
     // @Increment: 1
@@ -809,45 +705,20 @@ const AP_Param::GroupInfo GCS_MAVLINK::var_info[] PROGMEM = {
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("PARAMS",   8, GCS_MAVLINK, streamRates[8],  0),
-    AP_GROUPEND
+
+    // @Param: ADSB
+    // @DisplayName: ADSB stream rate to ground station
+    // @Description: ADSB stream rate to ground station
+    // @Units: Hz
+    // @Range: 0 50
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("ADSB",   9, GCS_MAVLINK, streamRates[9],  5),
+AP_GROUPEND
 };
 
-
-// see if we should send a stream now. Called at 50Hz
-bool GCS_MAVLINK::stream_trigger(enum streams stream_num)
-{
-    if (stream_num >= NUM_STREAMS) {
-        return false;
-    }
-    float rate = (uint8_t)streamRates[stream_num].get();
-
-    // send at a much lower rate while handling waypoints and
-    // parameter sends
-    if ((stream_num != STREAM_PARAMS) &&
-        (waypoint_receiving || _queued_parameter != NULL)) {
-        rate *= 0.25f;
-    }
-
-    if (rate <= 0) {
-        return false;
-    }
-
-    if (stream_ticks[stream_num] == 0) {
-        // we're triggering now, setup the next trigger point
-        if (rate > 50) {
-            rate = 50;
-        }
-        stream_ticks[stream_num] = (50 / rate) - 1 + stream_slowdown;
-        return true;
-    }
-
-    // count down at 50Hz
-    stream_ticks[stream_num]--;
-    return false;
-}
-
 void
-GCS_MAVLINK::data_stream_send(void)
+GCS_MAVLINK_Copter::data_stream_send(void)
 {
     if (waypoint_receiving) {
         // don't interfere with mission transfer
@@ -860,7 +731,7 @@ GCS_MAVLINK::data_stream_send(void)
 
     copter.gcs_out_of_time = false;
 
-    if (_queued_parameter != NULL) {
+    if (_queued_parameter != nullptr) {
         if (streamRates[STREAM_PARAMS].get() <= 0) {
             streamRates[STREAM_PARAMS].set(10);
         }
@@ -936,25 +807,34 @@ GCS_MAVLINK::data_stream_send(void)
         send_message(MSG_HWSTATUS);
         send_message(MSG_SYSTEM_TIME);
         send_message(MSG_RANGEFINDER);
-#if AP_TERRAIN_AVAILABLE
+#if AP_TERRAIN_AVAILABLE && AC_TERRAIN
         send_message(MSG_TERRAIN);
 #endif
         send_message(MSG_BATTERY2);
         send_message(MSG_MOUNT_STATUS);
         send_message(MSG_OPTICAL_FLOW);
         send_message(MSG_GIMBAL_REPORT);
+        send_message(MSG_MAG_CAL_REPORT);
+        send_message(MSG_MAG_CAL_PROGRESS);
         send_message(MSG_EKF_STATUS_REPORT);
         send_message(MSG_VIBRATION);
+        send_message(MSG_RPM);
+    }
+
+    if (copter.gcs_out_of_time) return;
+
+    if (stream_trigger(STREAM_ADSB)) {
+        send_message(MSG_ADSB_VEHICLE);
     }
 }
 
 
-void GCS_MAVLINK::handle_guided_request(AP_Mission::Mission_Command &cmd)
+bool GCS_MAVLINK_Copter::handle_guided_request(AP_Mission::Mission_Command &cmd)
 {
-    copter.do_guided(cmd);
+    return copter.do_guided(cmd);
 }
 
-void GCS_MAVLINK::handle_change_alt_request(AP_Mission::Mission_Command &cmd)
+void GCS_MAVLINK_Copter::handle_change_alt_request(AP_Mission::Mission_Command &cmd)
 {
     // add home alt if needed
     if (cmd.content.location.flags.relative_alt) {
@@ -964,7 +844,17 @@ void GCS_MAVLINK::handle_change_alt_request(AP_Mission::Mission_Command &cmd)
     // To-Do: update target altitude for loiter or waypoint controller depending upon nav mode
 }
 
-void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
+void GCS_MAVLINK_Copter::packetReceived(const mavlink_status_t &status,
+                                        mavlink_message_t &msg)
+{
+    if (copter.g2.dev_options.get() & DevOptionADSBMAVLink) {
+        // optional handling of GLOBAL_POSITION_INT as a MAVLink based avoidance source
+        copter.avoidance_adsb.handle_msg(msg);
+    }
+    GCS_MAVLINK::packetReceived(status, msg);
+}
+
+void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
 {
     uint8_t result = MAV_RESULT_FAILED;         // assume failure.  Each messages id is responsible for return ACK or NAK if required
 
@@ -974,32 +864,35 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
     {
         // We keep track of the last time we received a heartbeat from our GCS for failsafe purposes
         if(msg->sysid != copter.g.sysid_my_gcs) break;
-        copter.failsafe.last_heartbeat_ms = hal.scheduler->millis();
+        copter.failsafe.last_heartbeat_ms = AP_HAL::millis();
         copter.pmTest1++;
         break;
     }
 
     case MAVLINK_MSG_ID_SET_MODE:       // MAV ID: 11
     {
-        handle_set_mode(msg, FUNCTOR_BIND(&copter, &Copter::set_mode, bool, uint8_t));
-        break;
-    }
-
-    case MAVLINK_MSG_ID_PARAM_REQUEST_READ:         // MAV ID: 20
-    {
-        handle_param_request_read(msg);
+#ifdef DISALLOW_GCS_MODE_CHANGE_DURING_RC_FAILSAFE
+        if (!copter.failsafe.radio) {
+            handle_set_mode(msg, FUNCTOR_BIND(&copter, &Copter::gcs_set_mode, bool, uint8_t));
+        } else {
+            // don't allow mode changes while in radio failsafe
+            mavlink_msg_command_ack_send_buf(msg, chan, MAVLINK_MSG_ID_SET_MODE, MAV_RESULT_FAILED);
+        }
+#else
+        handle_set_mode(msg, FUNCTOR_BIND(&copter, &Copter::gcs_set_mode, bool, uint8_t));
+#endif
         break;
     }
 
     case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:         // MAV ID: 21
     {
         // mark the firmware version in the tlog
-        send_text_P(SEVERITY_LOW, PSTR(FIRMWARE_STRING));
+        send_text(MAV_SEVERITY_INFO, FIRMWARE_STRING);
 
 #if defined(PX4_GIT_VERSION) && defined(NUTTX_GIT_VERSION)
-        send_text_P(SEVERITY_LOW, PSTR("PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION));
+        send_text(MAV_SEVERITY_INFO, "PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION);
 #endif
-        send_text_P(SEVERITY_LOW, PSTR("Frame: " FRAME_CONFIG_STRING));
+        send_text(MAV_SEVERITY_INFO, "Frame: " FRAME_CONFIG_STRING);
         handle_param_request_list(msg);
         break;
     }
@@ -1007,6 +900,14 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
     case MAVLINK_MSG_ID_PARAM_SET:     // 23
     {
         handle_param_set(msg, &copter.DataFlash);
+        break;
+    }
+
+    case MAVLINK_MSG_ID_PARAM_VALUE:
+    {
+#if MOUNT == ENABLED
+        copter.camera_mount.handle_param_value(msg);
+#endif
         break;
     }
 
@@ -1024,9 +925,18 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         }
         break;
     }
+    
+    case MAVLINK_MSG_ID_MISSION_ITEM_INT:
+    {
+        if (handle_mission_item(msg, copter.mission)) {
+            copter.DataFlash.Log_Write_EntireMission(copter.mission);
+        }
+        break;
+    }
 
     // read an individual command from EEPROM and send it to the GCS
-    case MAVLINK_MSG_ID_MISSION_REQUEST:     // MAV ID: 40
+    case MAVLINK_MSG_ID_MISSION_REQUEST_INT:
+    case MAVLINK_MSG_ID_MISSION_REQUEST:     // MAV ID: 40, 51
     {
         handle_mission_request(copter.mission, msg);
         break;
@@ -1065,6 +975,20 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         break;
     }
 
+    case MAVLINK_MSG_ID_STATUSTEXT:
+    {
+        // ignore any statustext messages not from our GCS:
+        if (msg->sysid != copter.g.sysid_my_gcs) {
+            break;
+        }
+        mavlink_statustext_t packet;
+        mavlink_msg_statustext_decode(msg, &packet);
+        char text[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1+4] = { 'G','C','S',':'};
+        memcpy(&text[4], packet.text, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN);
+        copter.DataFlash.Log_Write_Message(text);
+        break;
+    }
+
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     {
 #if MOUNT == ENABLED
@@ -1091,12 +1015,49 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         v[5] = packet.chan6_raw;
         v[6] = packet.chan7_raw;
         v[7] = packet.chan8_raw;
-        hal.rcin->set_overrides(v, 8);
 
         // record that rc are overwritten so we can trigger a failsafe if we lose contact with groundstation
-        copter.failsafe.rc_override_active = true;
-        // a RC override message is consiered to be a 'heartbeat' from the ground station for failsafe purposes
-        copter.failsafe.last_heartbeat_ms = hal.scheduler->millis();
+        copter.failsafe.rc_override_active = hal.rcin->set_overrides(v, 8);
+
+        // a RC override message is considered to be a 'heartbeat' from the ground station for failsafe purposes
+        copter.failsafe.last_heartbeat_ms = AP_HAL::millis();
+        break;
+    }
+
+    case MAVLINK_MSG_ID_COMMAND_INT:
+    {
+        // decode packet
+        mavlink_command_int_t packet;
+        mavlink_msg_command_int_decode(msg, &packet);
+        switch(packet.command)
+        {
+            case MAV_CMD_DO_SET_ROI: {
+                // param1 : /* Region of interest mode (not used)*/
+                // param2 : /* MISSION index/ target ID (not used)*/
+                // param3 : /* ROI index (not used)*/
+                // param4 : /* empty */
+                // x : lat
+                // y : lon
+                // z : alt
+                // sanity check location
+                if (!check_latlng(packet.x, packet.y)) {
+                    break;
+                }
+                Location roi_loc;
+                roi_loc.lat = packet.x;
+                roi_loc.lng = packet.y;
+                roi_loc.alt = (int32_t)(packet.z * 100.0f);
+                copter.set_auto_yaw_roi(roi_loc);
+                result = MAV_RESULT_ACCEPTED;
+                break;
+            }
+            default:
+                result = MAV_RESULT_UNSUPPORTED;
+                break;
+        }
+
+        // send ACK or NAK
+        mavlink_msg_command_ack_send_buf(msg, chan, packet.command, result);
         break;
     }
 
@@ -1110,12 +1071,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         switch(packet.command) {
 
         case MAV_CMD_START_RX_PAIR:
-            // initiate bind procedure
-            if (!hal.rcin->rc_bind(packet.param1)) {
-                result = MAV_RESULT_FAILED;
-            } else {
-                result = MAV_RESULT_ACCEPTED;
-            }
+            result = handle_rc_bind(packet);
             break;
 
         case MAV_CMD_NAV_TAKEOFF: {
@@ -1137,19 +1093,19 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
 
         case MAV_CMD_NAV_LOITER_UNLIM:
-            if (copter.set_mode(LOITER)) {
+            if (copter.set_mode(LOITER, MODE_REASON_GCS_COMMAND)) {
                 result = MAV_RESULT_ACCEPTED;
             }
             break;
 
         case MAV_CMD_NAV_RETURN_TO_LAUNCH:
-            if (copter.set_mode(RTL)) {
+            if (copter.set_mode(RTL, MODE_REASON_GCS_COMMAND)) {
                 result = MAV_RESULT_ACCEPTED;
             }
             break;
 
         case MAV_CMD_NAV_LAND:
-            if (copter.set_mode(LAND)) {
+            if (copter.set_mode(LAND, MODE_REASON_GCS_COMMAND)) {
                 result = MAV_RESULT_ACCEPTED;
             }
             break;
@@ -1193,6 +1149,10 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
                     result = MAV_RESULT_ACCEPTED;
                 }
             } else {
+                // sanity check location
+                if (!check_latlng(packet.param5, packet.param6)) {
+                    break;
+                }
                 Location new_home_loc;
                 new_home_loc.lat = (int32_t)(packet.param5 * 1.0e7f);
                 new_home_loc.lng = (int32_t)(packet.param6 * 1.0e7f);
@@ -1205,6 +1165,13 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             }
             break;
 
+        case MAV_CMD_DO_FLIGHTTERMINATION:
+            if (packet.param1 > 0.5f) {
+                copter.init_disarm_motors();
+                result = MAV_RESULT_ACCEPTED;
+            }
+            break;
+
         case MAV_CMD_DO_SET_ROI:
             // param1 : regional of interest mode (not supported)
             // param2 : mission index/ target id (not supported)
@@ -1212,6 +1179,10 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             // param5 : x / lat
             // param6 : y / lon
             // param7 : z / alt
+            // sanity check location
+            if (!check_latlng(packet.param5, packet.param6)) {
+                break;
+            }
             Location roi_loc;
             roi_loc.lat = (int32_t)(packet.param5 * 1.0e7f);
             roi_loc.lng = (int32_t)(packet.param6 * 1.0e7f);
@@ -1220,9 +1191,44 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             result = MAV_RESULT_ACCEPTED;
             break;
 
+#if CAMERA == ENABLED
+        case MAV_CMD_DO_DIGICAM_CONFIGURE:
+            copter.camera.configure(packet.param1,
+                                    packet.param2,
+                                    packet.param3,
+                                    packet.param4,
+                                    packet.param5,
+                                    packet.param6,
+                                    packet.param7);
+
+            result = MAV_RESULT_ACCEPTED;
+            break;
+
+        case MAV_CMD_DO_DIGICAM_CONTROL:
+            if (copter.camera.control(packet.param1,
+                                      packet.param2,
+                                      packet.param3,
+                                      packet.param4,
+                                      packet.param5,
+                                      packet.param6)) {
+                copter.log_picture();
+            }
+            result = MAV_RESULT_ACCEPTED;
+            break;
+#endif // CAMERA == ENABLED
+        case MAV_CMD_DO_MOUNT_CONTROL:
+#if MOUNT == ENABLED
+            copter.camera_mount.control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
+            result = MAV_RESULT_ACCEPTED;
+#endif
+            break;
+
         case MAV_CMD_MISSION_START:
-            if (copter.motors.armed() && copter.set_mode(AUTO)) {
+            if (copter.motors.armed() && copter.set_mode(AUTO, MODE_REASON_GCS_COMMAND)) {
                 copter.set_auto_armed(true);
+                if (copter.mission.state() != AP_Mission::MISSION_RUNNING) {
+                    copter.mission.start_or_resume();
+                }
                 result = MAV_RESULT_ACCEPTED;
             }
             break;
@@ -1234,11 +1240,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
                 break;
             }
             if (is_equal(packet.param1,1.0f)) {
-                // gyro offset calibration
-                copter.ins.init_gyro();
-                // reset ahrs gyro bias
-                if (copter.ins.gyro_calibrated_ok_all()) {
-                    copter.ahrs.reset_gyro_drift();
+                if (copter.calibrate_gyros()) {
                     result = MAV_RESULT_ACCEPTED;
                 } else {
                     result = MAV_RESULT_FAILED;
@@ -1251,17 +1253,20 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
                 result = MAV_RESULT_UNSUPPORTED;
             } else if (is_equal(packet.param5,1.0f)) {
                 // 3d accel calibration
-                float trim_roll, trim_pitch;
-                // this blocks
-                AP_InertialSensor_UserInteract_MAVLink interact(this);
-                if(copter.ins.calibrate_accel(&interact, trim_roll, trim_pitch)) {
-                    // reset ahrs's trim to suggested values from calibration routine
-                    copter.ahrs.set_trim(Vector3f(trim_roll, trim_pitch, 0));
-                    result = MAV_RESULT_ACCEPTED;
-                } else {
+                result = MAV_RESULT_ACCEPTED;
+                if (!copter.calibrate_gyros()) {
                     result = MAV_RESULT_FAILED;
+                    break;
                 }
+                copter.ins.acal_init();
+                copter.ins.get_acal()->start(this);
+                
             } else if (is_equal(packet.param5,2.0f)) {
+                // calibrate gyros
+                if (!copter.calibrate_gyros()) {
+                    result = MAV_RESULT_FAILED;
+                    break;
+                }
                 // accel trim
                 float trim_roll, trim_pitch;
                 if(copter.ins.calibrate_trim(trim_roll, trim_pitch)) {
@@ -1278,17 +1283,21 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             break;
 
         case MAV_CMD_PREFLIGHT_SET_SENSOR_OFFSETS:
-            if (is_equal(packet.param1,2.0f)) {
-                // save first compass's offsets
-                copter.compass.set_and_save_offsets(0, packet.param2, packet.param3, packet.param4);
-                result = MAV_RESULT_ACCEPTED;
+            {
+                uint8_t compassNumber = -1;
+                if (is_equal(packet.param1, 2.0f)) {
+                    compassNumber = 0;
+                } else if (is_equal(packet.param1, 5.0f)) {
+                    compassNumber = 1;
+                } else if (is_equal(packet.param1, 6.0f)) {
+                    compassNumber = 2;
+                }
+                if (compassNumber != (uint8_t) -1) {
+                    copter.compass.set_and_save_offsets(compassNumber, packet.param2, packet.param3, packet.param4);
+                    result = MAV_RESULT_ACCEPTED;
+                }
+                break;
             }
-            if (is_equal(packet.param1,5.0f)) {
-                // save secondary compass's offsets
-                copter.compass.set_and_save_offsets(1, packet.param2, packet.param3, packet.param4);
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
 
         case MAV_CMD_COMPONENT_ARM_DISARM:
             if (is_equal(packet.param1,1.0f)) {
@@ -1296,11 +1305,21 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
                 if (copter.init_arm_motors(true)) {
                     result = MAV_RESULT_ACCEPTED;
                 }
-            } else if (is_zero(packet.param1) && (copter.mode_has_manual_throttle(copter.control_mode) || copter.ap.land_complete || is_equal(packet.param2,21196.0f)))  {
+            } else if (is_zero(packet.param1) && (copter.ap.land_complete || is_equal(packet.param2,21196.0f)))  {
+                // force disarming by setting param2 = 21196 is deprecated
                 copter.init_disarm_motors();
                 result = MAV_RESULT_ACCEPTED;
             } else {
                 result = MAV_RESULT_UNSUPPORTED;
+            }
+            break;
+
+        case MAV_CMD_GET_HOME_POSITION:
+            if (copter.ap.home_state != HOME_UNSET) {
+                send_home(copter.ahrs.get_home());
+                result = MAV_RESULT_ACCEPTED;
+            } else {
+                result = MAV_RESULT_FAILED;
             }
             break;
 
@@ -1330,9 +1349,9 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
         case MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN:
             if (is_equal(packet.param1,1.0f) || is_equal(packet.param1,3.0f)) {
-                AP_Notify::events.firmware_update = 1;
+                AP_Notify::flags.firmware_update = 1;
                 copter.update_notify();
-                hal.scheduler->delay(50);
+                hal.scheduler->delay(200);
                 // when packet.param1 == 3 we reboot to hold in bootloader
                 hal.scheduler->reboot(is_equal(packet.param1,3.0f));
                 result = MAV_RESULT_ACCEPTED;
@@ -1391,20 +1410,20 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             result = copter.mavlink_motor_test_start(chan, (uint8_t)packet.param1, (uint8_t)packet.param2, (uint16_t)packet.param3, packet.param4);
             break;
 
-#if EPM_ENABLED == ENABLED
+#if GRIPPER_ENABLED == ENABLED
         case MAV_CMD_DO_GRIPPER:
             // param1 : gripper number (ignored)
             // param2 : action (0=release, 1=grab). See GRIPPER_ACTIONS enum.
-            if(!copter.epm.enabled()) {
+            if(!copter.g2.gripper.enabled()) {
                 result = MAV_RESULT_FAILED;
             } else {
                 result = MAV_RESULT_ACCEPTED;
                 switch ((uint8_t)packet.param2) {
                     case GRIPPER_ACTION_RELEASE:
-                        copter.epm.release();
+                        copter.g2.gripper.release();
                         break;
                     case GRIPPER_ACTION_GRAB:
-                        copter.epm.grab();
+                        copter.g2.gripper.grab();
                         break;
                     default:
                         result = MAV_RESULT_FAILED;
@@ -1416,11 +1435,115 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
         case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES: {
             if (is_equal(packet.param1,1.0f)) {
-                copter.gcs[chan-MAVLINK_COMM_0].send_autopilot_version();
+                send_autopilot_version(FIRMWARE_VERSION);
                 result = MAV_RESULT_ACCEPTED;
             }
             break;
         }
+
+        case MAV_CMD_DO_START_MAG_CAL:
+        case MAV_CMD_DO_ACCEPT_MAG_CAL:
+        case MAV_CMD_DO_CANCEL_MAG_CAL:
+            result = copter.compass.handle_mag_cal_command(packet);
+
+            break;
+
+        case MAV_CMD_DO_SEND_BANNER: {
+            result = MAV_RESULT_ACCEPTED;
+
+            send_text(MAV_SEVERITY_INFO, FIRMWARE_STRING);
+
+            #if defined(PX4_GIT_VERSION) && defined(NUTTX_GIT_VERSION)
+            send_text(MAV_SEVERITY_INFO, "PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION);
+            #endif
+
+            send_text(MAV_SEVERITY_INFO, "Frame: " FRAME_CONFIG_STRING);
+
+            // send system ID if we can
+            char sysid[40];
+            if (hal.util->get_system_id(sysid)) {
+                send_text(MAV_SEVERITY_INFO, sysid);
+            }
+
+            break;
+        }
+
+        /* Solo user presses Fly button */
+        case MAV_CMD_SOLO_BTN_FLY_CLICK: {
+            result = MAV_RESULT_ACCEPTED;
+
+            if (copter.failsafe.radio) {
+                break;
+            }
+
+            // set mode to Loiter or fall back to AltHold
+            if (!copter.set_mode(LOITER, MODE_REASON_GCS_COMMAND)) {
+                copter.set_mode(ALT_HOLD, MODE_REASON_GCS_COMMAND);
+            }
+            break;
+        }
+
+        /* Solo user holds down Fly button for a couple of seconds */
+        case MAV_CMD_SOLO_BTN_FLY_HOLD: {
+            result = MAV_RESULT_ACCEPTED;
+
+            if (copter.failsafe.radio) {
+                break;
+            }
+
+            if (!copter.motors.armed()) {
+                // if disarmed, arm motors
+                copter.init_arm_motors(true);
+            } else if (copter.ap.land_complete) {
+                // if armed and landed, takeoff
+                if (copter.set_mode(LOITER, MODE_REASON_GCS_COMMAND)) {
+                    copter.do_user_takeoff(packet.param1*100, true);
+                }
+            } else {
+                // if flying, land
+                copter.set_mode(LAND, MODE_REASON_GCS_COMMAND);
+            }
+            break;
+        }
+
+        /* Solo user presses pause button */
+        case MAV_CMD_SOLO_BTN_PAUSE_CLICK: {
+            result = MAV_RESULT_ACCEPTED;
+
+            if (copter.failsafe.radio) {
+                break;
+            }
+
+            if (copter.motors.armed()) {
+                if (copter.ap.land_complete) {
+                    // if landed, disarm motors
+                    copter.init_disarm_motors();
+                } else {
+                    // assume that shots modes are all done in guided.
+                    // NOTE: this may need to change if we add a non-guided shot mode
+                    bool shot_mode = (!is_zero(packet.param1) && (copter.control_mode == GUIDED || copter.control_mode == GUIDED_NOGPS));
+
+                    if (!shot_mode) {
+                        if (copter.set_mode(BRAKE, MODE_REASON_GCS_COMMAND)) {
+                            copter.brake_timeout_to_loiter_ms(2500);
+                        } else {
+                            copter.set_mode(ALT_HOLD, MODE_REASON_GCS_COMMAND);
+                        }
+                    } else {
+                        // SoloLink is expected to handle pause in shots
+                    }
+                }
+            }
+            break;
+        }
+
+        case MAV_CMD_ACCELCAL_VEHICLE_POS:
+            result = MAV_RESULT_FAILED;
+
+            if (copter.ins.get_acal()->gcs_vehicle_position(packet.param1)) {
+                result = MAV_RESULT_ACCEPTED;
+            }
+            break;
 
         default:
             result = MAV_RESULT_UNSUPPORTED;
@@ -1439,6 +1562,48 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         break;
     }
 
+    case MAVLINK_MSG_ID_SET_ATTITUDE_TARGET:   // MAV ID: 82
+    {
+        // decode packet
+        mavlink_set_attitude_target_t packet;
+        mavlink_msg_set_attitude_target_decode(msg, &packet);
+
+        // exit if vehicle is not in Guided mode or Auto-Guided mode
+        if ((copter.control_mode != GUIDED) && (copter.control_mode != GUIDED_NOGPS) && !(copter.control_mode == AUTO && copter.auto_mode == Auto_NavGuided)) {
+            break;
+        }
+
+        // ensure type_mask specifies to use attitude and thrust
+        if ((packet.type_mask & ((1<<7)|(1<<6))) != 0) {
+            break;
+        }
+
+        // convert thrust to climb rate
+        packet.thrust = constrain_float(packet.thrust, 0.0f, 1.0f);
+        float climb_rate_cms = 0.0f;
+        if (is_equal(packet.thrust, 0.5f)) {
+            climb_rate_cms = 0.0f;
+        } else if (packet.thrust > 0.5f) {
+            // climb at up to WPNAV_SPEED_UP
+            climb_rate_cms = (packet.thrust - 0.5f) * 2.0f * copter.wp_nav.get_speed_up();
+        } else {
+            // descend at up to WPNAV_SPEED_DN
+            climb_rate_cms = (0.5f - packet.thrust) * 2.0f * -fabsf(copter.wp_nav.get_speed_down());
+        }
+
+        // if the body_yaw_rate field is ignored, use the commanded yaw position
+        // otherwise use the commanded yaw rate
+        bool use_yaw_rate = false;
+        if ((packet.type_mask & (1<<2)) == 0) {
+            use_yaw_rate = true;
+        }
+
+        copter.guided_set_angle(Quaternion(packet.q[0],packet.q[1],packet.q[2],packet.q[3]),
+            climb_rate_cms, use_yaw_rate, packet.body_yaw_rate);
+
+        break;
+    }
+
     case MAVLINK_MSG_ID_SET_POSITION_TARGET_LOCAL_NED:     // MAV ID: 84
     {
         // decode packet
@@ -1447,6 +1612,14 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
         // exit if vehicle is not in Guided mode or Auto-Guided mode
         if ((copter.control_mode != GUIDED) && !(copter.control_mode == AUTO && copter.auto_mode == Auto_NavGuided)) {
+            break;
+        }
+
+        // check for supported coordinate frames
+        if (packet.coordinate_frame != MAV_FRAME_LOCAL_NED &&
+            packet.coordinate_frame != MAV_FRAME_LOCAL_OFFSET_NED &&
+            packet.coordinate_frame != MAV_FRAME_BODY_NED &&
+            packet.coordinate_frame != MAV_FRAME_BODY_OFFSET_NED) {
             break;
         }
 
@@ -1461,16 +1634,47 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
          * bool yaw_rate_ignore = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_YAW_RATE_IGNORE;
          */
 
+        // prepare position
+        Vector3f pos_vector;
+        if (!pos_ignore) {
+            // convert to cm
+            pos_vector = Vector3f(packet.x * 100.0f, packet.y * 100.0f, -packet.z * 100.0f);
+            // rotate to body-frame if necessary
+            if (packet.coordinate_frame == MAV_FRAME_BODY_NED ||
+                packet.coordinate_frame == MAV_FRAME_BODY_OFFSET_NED) {
+                copter.rotate_body_frame_to_NE(pos_vector.x, pos_vector.y);
+            }
+            // add body offset if necessary
+            if (packet.coordinate_frame == MAV_FRAME_LOCAL_OFFSET_NED ||
+                packet.coordinate_frame == MAV_FRAME_BODY_NED ||
+                packet.coordinate_frame == MAV_FRAME_BODY_OFFSET_NED) {
+                pos_vector += copter.inertial_nav.get_position();
+            } else {
+                // convert from alt-above-home to alt-above-ekf-origin
+                pos_vector.z = copter.pv_alt_above_origin(pos_vector.z);
+            }
+        }
+
+        // prepare velocity
+        Vector3f vel_vector;
+        if (!vel_ignore) {
+            // convert to cm
+            vel_vector = Vector3f(packet.vx * 100.0f, packet.vy * 100.0f, -packet.vz * 100.0f);
+            // rotate to body-frame if necessary
+            if (packet.coordinate_frame == MAV_FRAME_BODY_NED || packet.coordinate_frame == MAV_FRAME_BODY_OFFSET_NED) {
+                copter.rotate_body_frame_to_NE(vel_vector.x, vel_vector.y);
+            }
+        }
+
+        // send request
         if (!pos_ignore && !vel_ignore && acc_ignore) {
-            Vector3f pos_ned = Vector3f(packet.x * 100.0f, packet.y * 100.0f, -packet.z * 100.0f);
-            pos_ned.z = copter.pv_alt_above_origin(pos_ned.z);
-            copter.guided_set_destination_posvel(pos_ned, Vector3f(packet.vx * 100.0f, packet.vy * 100.0f, -packet.vz * 100.0f));
+            copter.guided_set_destination_posvel(pos_vector, vel_vector);
         } else if (pos_ignore && !vel_ignore && acc_ignore) {
-            copter.guided_set_velocity(Vector3f(packet.vx * 100.0f, packet.vy * 100.0f, -packet.vz * 100.0f));
+            copter.guided_set_velocity(vel_vector);
         } else if (!pos_ignore && vel_ignore && acc_ignore) {
-            Vector3f pos_ned = Vector3f(packet.x * 100.0f, packet.y * 100.0f, -packet.z * 100.0f);
-            pos_ned.z = copter.pv_alt_above_origin(pos_ned.z);
-            copter.guided_set_destination(pos_ned);
+            if (!copter.guided_set_destination(pos_vector)) {
+                result = MAV_RESULT_FAILED;
+            }
         } else {
             result = MAV_RESULT_FAILED;
         }
@@ -1489,6 +1693,14 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             break;
         }
 
+        // check for supported coordinate frames
+        if (packet.coordinate_frame != MAV_FRAME_GLOBAL_INT &&
+            packet.coordinate_frame != MAV_FRAME_GLOBAL_RELATIVE_ALT && // solo shot manager incorrectly sends RELATIVE_ALT instead of RELATIVE_ALT_INT
+            packet.coordinate_frame != MAV_FRAME_GLOBAL_RELATIVE_ALT_INT &&
+            packet.coordinate_frame != MAV_FRAME_GLOBAL_TERRAIN_ALT_INT) {
+            break;
+        }
+
         bool pos_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_POS_IGNORE;
         bool vel_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_VEL_IGNORE;
         bool acc_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_ACC_IGNORE;
@@ -1503,25 +1715,31 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         Vector3f pos_ned;
 
         if(!pos_ignore) {
+            // sanity check location
+            if (!check_latlng(packet.lat_int, packet.lon_int)) {
+                result = MAV_RESULT_FAILED;
+                break;
+            }
             Location loc;
             loc.lat = packet.lat_int;
             loc.lng = packet.lon_int;
             loc.alt = packet.alt*100;
             switch (packet.coordinate_frame) {
-                case MAV_FRAME_GLOBAL_RELATIVE_ALT:
+                case MAV_FRAME_GLOBAL_RELATIVE_ALT: // solo shot manager incorrectly sends RELATIVE_ALT instead of RELATIVE_ALT_INT
                 case MAV_FRAME_GLOBAL_RELATIVE_ALT_INT:
                     loc.flags.relative_alt = true;
                     loc.flags.terrain_alt = false;
                     break;
-                case MAV_FRAME_GLOBAL_TERRAIN_ALT:
                 case MAV_FRAME_GLOBAL_TERRAIN_ALT_INT:
                     loc.flags.relative_alt = true;
                     loc.flags.terrain_alt = true;
                     break;
-                case MAV_FRAME_GLOBAL:
                 case MAV_FRAME_GLOBAL_INT:
                 default:
-                    loc.flags.relative_alt = false;
+                    // Copter does not support navigation to absolute altitudes. This convert the WGS84 altitude
+                    // to a home-relative altitude before passing it to the navigation controller
+                    loc.alt -= copter.ahrs.get_home().alt;
+                    loc.flags.relative_alt = true;
                     loc.flags.terrain_alt = false;
                     break;
             }
@@ -1533,7 +1751,9 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         } else if (pos_ignore && !vel_ignore && acc_ignore) {
             copter.guided_set_velocity(Vector3f(packet.vx * 100.0f, packet.vy * 100.0f, -packet.vz * 100.0f));
         } else if (!pos_ignore && vel_ignore && acc_ignore) {
-            copter.guided_set_destination(pos_ned);
+            if (!copter.guided_set_destination(pos_ned)) {
+                result = MAV_RESULT_FAILED;
+            }
         } else {
             result = MAV_RESULT_FAILED;
         }
@@ -1541,11 +1761,31 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         break;
     }
 
+    case MAVLINK_MSG_ID_DISTANCE_SENSOR:
+    {
+        result = MAV_RESULT_ACCEPTED;
+        copter.rangefinder.handle_msg(msg);
+        break;
+    }
+
+    case MAVLINK_MSG_ID_GPS_RTCM_DATA:
+    case MAVLINK_MSG_ID_GPS_INPUT:
+    {
+      result = MAV_RESULT_ACCEPTED;
+      copter.gps.handle_msg(msg);
+      break;
+    }
+
 #if HIL_MODE != HIL_MODE_DISABLED
     case MAVLINK_MSG_ID_HIL_STATE:          // MAV ID: 90
     {
         mavlink_hil_state_t packet;
         mavlink_msg_hil_state_decode(msg, &packet);
+
+        // sanity check location
+        if (!check_latlng(packet.lat, packet.lon)) {
+            break;
+        }
 
         // set gps hil sensor
         Location loc;
@@ -1557,7 +1797,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
         gps.setHIL(0, AP_GPS::GPS_OK_FIX_3D,
                    packet.time_usec/1000,
-                   loc, vel, 10, 0, true);
+                   loc, vel, 10, 0);
 
         // rad/sec
         Vector3f gyros;
@@ -1593,7 +1833,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
     case MAVLINK_MSG_ID_LOG_REQUEST_DATA:
     case MAVLINK_MSG_ID_LOG_ERASE:
         copter.in_log_download = true;
-        // fallthru
+        /* no break */
     case MAVLINK_MSG_ID_LOG_REQUEST_LIST:
         if (!copter.in_mavlink_delay && !copter.motors.armed()) {
             handle_log_message(msg, copter.DataFlash);
@@ -1606,7 +1846,6 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         }
         break;
 
-#if HAL_CPU_CLASS > HAL_CPU_CLASS_16
     case MAVLINK_MSG_ID_SERIAL_CONTROL:
         handle_serial_control(msg, copter.gps);
         break;
@@ -1616,12 +1855,27 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         result = MAV_RESULT_ACCEPTED;
         break;
 
+#if PRECISION_LANDING == ENABLED
+    case MAVLINK_MSG_ID_LANDING_TARGET:
+        result = MAV_RESULT_ACCEPTED;
+        copter.precland.handle_msg(msg);
+        break;
 #endif
 
+#if AC_FENCE == ENABLED
+    // send or receive fence points with GCS
+    case MAVLINK_MSG_ID_FENCE_POINT:            // MAV ID: 160
+    case MAVLINK_MSG_ID_FENCE_FETCH_POINT:
+        copter.fence.handle_msg(chan, msg);
+        break;
+#endif // AC_FENCE == ENABLED
+
 #if CAMERA == ENABLED
+    //deprecated.  Use MAV_CMD_DO_DIGICAM_CONFIGURE
     case MAVLINK_MSG_ID_DIGICAM_CONFIGURE:      // MAV ID: 202
         break;
 
+    //deprecated.  Use MAV_CMD_DO_DIGICAM_CONTROL
     case MAVLINK_MSG_ID_DIGICAM_CONTROL:
         copter.camera.control_msg(msg);
         copter.log_picture();
@@ -1629,10 +1883,11 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 #endif // CAMERA == ENABLED
 
 #if MOUNT == ENABLED
+    //deprecated. Use MAV_CMD_DO_MOUNT_CONFIGURE
     case MAVLINK_MSG_ID_MOUNT_CONFIGURE:        // MAV ID: 204
         copter.camera_mount.configure_msg(msg);
         break;
-
+    //deprecated. Use MAV_CMD_DO_MOUNT_CONTROL
     case MAVLINK_MSG_ID_MOUNT_CONTROL:
         copter.camera_mount.control_msg(msg);
         break;
@@ -1640,7 +1895,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
     case MAVLINK_MSG_ID_TERRAIN_DATA:
     case MAVLINK_MSG_ID_TERRAIN_CHECK:
-#if AP_TERRAIN_AVAILABLE
+#if AP_TERRAIN_AVAILABLE && AC_TERRAIN
         copter.terrain.handle_data(chan, msg);
 #endif
         break;
@@ -1653,12 +1908,17 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
         if (packet.idx >= copter.rally.get_rally_total() ||
             packet.idx >= copter.rally.get_rally_max()) {
-            send_text_P(SEVERITY_LOW,PSTR("bad rally point message ID"));
+            send_text(MAV_SEVERITY_NOTICE,"Bad rally point message ID");
             break;
         }
 
         if (packet.count != copter.rally.get_rally_total()) {
-            send_text_P(SEVERITY_LOW,PSTR("bad rally point message count"));
+            send_text(MAV_SEVERITY_NOTICE,"Bad rally point message count");
+            break;
+        }
+
+        // sanity check location
+        if (!check_latlng(packet.lat, packet.lng)) {
             break;
         }
 
@@ -1671,7 +1931,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         rally_point.flags = packet.flags;
 
         if (!copter.rally.set_rally_point_with_index(packet.idx, rally_point)) {
-            send_text_P(SEVERITY_HIGH, PSTR("error setting rally point"));
+            send_text(MAV_SEVERITY_CRITICAL, "Error setting rally point");
         }
 
         break;
@@ -1679,42 +1939,35 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 
     //send a rally point to the GCS
     case MAVLINK_MSG_ID_RALLY_FETCH_POINT: {
-        //send_text_P(SEVERITY_HIGH, PSTR("## getting rally point in GCS_Mavlink.cpp 1")); // #### TEMP
-
         mavlink_rally_fetch_point_t packet;
         mavlink_msg_rally_fetch_point_decode(msg, &packet);
 
-        //send_text_P(SEVERITY_HIGH, PSTR("## getting rally point in GCS_Mavlink.cpp 2")); // #### TEMP
-
         if (packet.idx > copter.rally.get_rally_total()) {
-            send_text_P(SEVERITY_LOW, PSTR("bad rally point index"));
+            send_text(MAV_SEVERITY_NOTICE, "Bad rally point index");
             break;
         }
 
-        //send_text_P(SEVERITY_HIGH, PSTR("## getting rally point in GCS_Mavlink.cpp 3")); // #### TEMP
-
         RallyLocation rally_point;
         if (!copter.rally.get_rally_point_with_index(packet.idx, rally_point)) {
-           send_text_P(SEVERITY_LOW, PSTR("failed to set rally point"));
+           send_text(MAV_SEVERITY_NOTICE, "Failed to set rally point");
            break;
         }
-
-        //send_text_P(SEVERITY_HIGH, PSTR("## getting rally point in GCS_Mavlink.cpp 4")); // #### TEMP
 
         mavlink_msg_rally_point_send_buf(msg,
                                          chan, msg->sysid, msg->compid, packet.idx,
                                          copter.rally.get_rally_total(), rally_point.lat, rally_point.lng,
                                          rally_point.alt, rally_point.break_alt, rally_point.land_dir,
                                          rally_point.flags);
-
-        //send_text_P(SEVERITY_HIGH, PSTR("## getting rally point in GCS_Mavlink.cpp 5")); // #### TEMP
-
         break;
     }
 #endif // AC_RALLY == ENABLED
 
+    case MAVLINK_MSG_ID_REMOTE_LOG_BLOCK_STATUS:
+        copter.DataFlash.remote_log_block_status_msg(chan, msg);
+        break;
+
     case MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST:
-        copter.gcs[chan-MAVLINK_COMM_0].send_autopilot_version();
+        send_autopilot_version(FIRMWARE_VERSION);
         break;
 
     case MAVLINK_MSG_ID_LED_CONTROL:
@@ -1722,6 +1975,46 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         AP_Notify::handle_led_control(msg);
         break;
 
+    case MAVLINK_MSG_ID_PLAY_TUNE:
+        // send message to Notify
+        AP_Notify::handle_play_tune(msg);
+        break;
+                
+    case MAVLINK_MSG_ID_SET_HOME_POSITION:
+    {
+        mavlink_set_home_position_t packet;
+        mavlink_msg_set_home_position_decode(msg, &packet);
+        if((packet.latitude == 0) && (packet.longitude == 0) && (packet.altitude == 0)) {
+            copter.set_home_to_current_location_and_lock();
+        } else {
+            // sanity check location
+            if (!check_latlng(packet.latitude, packet.longitude)) {
+                break;
+            }
+            Location new_home_loc;
+            new_home_loc.lat = packet.latitude;
+            new_home_loc.lng = packet.longitude;
+            new_home_loc.alt = packet.altitude / 10;
+            if (copter.far_from_EKF_origin(new_home_loc)) {
+                break;
+            }
+            copter.set_home_and_lock(new_home_loc);
+        }
+        break;
+    }
+
+    case MAVLINK_MSG_ID_ADSB_VEHICLE:
+    case MAVLINK_MSG_ID_UAVIONIX_ADSB_OUT_CFG:
+    case MAVLINK_MSG_ID_UAVIONIX_ADSB_OUT_DYNAMIC:
+    case MAVLINK_MSG_ID_UAVIONIX_ADSB_TRANSCEIVER_HEALTH_REPORT:
+#if ADSB_ENABLED == ENABLED
+        copter.adsb.handle_message(chan, msg);
+#endif
+        break;
+
+    default:
+        handle_common_message(msg);
+        break;
     }     // end switch
 } // end handle mavlink
 
@@ -1754,7 +2047,7 @@ void Copter::mavlink_delay_cb()
     }
     if (tnow - last_5s > 5000) {
         last_5s = tnow;
-        gcs_send_text_P(SEVERITY_LOW, PSTR("Initialising APM..."));
+        gcs_send_text(MAV_SEVERITY_INFO, "Initialising APM");
     }
     check_usb_mux();
 
@@ -1769,6 +2062,19 @@ void Copter::gcs_send_message(enum ap_message id)
     for (uint8_t i=0; i<num_gcs; i++) {
         if (gcs[i].initialised) {
             gcs[i].send_message(id);
+        }
+    }
+}
+
+/*
+ *  send a mission item reached message and load the index before the send attempt in case it may get delayed
+ */
+void Copter::gcs_send_mission_item_reached_message(uint16_t mission_index)
+{
+    for (uint8_t i=0; i<num_gcs; i++) {
+        if (gcs[i].initialised) {
+            gcs[i].mission_item_reached_index = mission_index;
+            gcs[i].send_message(MSG_MISSION_ITEM_REACHED);
         }
     }
 }
@@ -1793,21 +2099,17 @@ void Copter::gcs_check_input(void)
     for (uint8_t i=0; i<num_gcs; i++) {
         if (gcs[i].initialised) {
 #if CLI_ENABLED == ENABLED
-            gcs[i].update(g.cli_enabled==1?FUNCTOR_BIND_MEMBER(&Copter::run_cli, void, AP_HAL::UARTDriver *):NULL);
+            gcs[i].update(g.cli_enabled==1?FUNCTOR_BIND_MEMBER(&Copter::run_cli, void, AP_HAL::UARTDriver *):nullptr);
 #else
-            gcs[i].update(NULL);
+            gcs[i].update(nullptr);
 #endif
         }
     }
 }
 
-void Copter::gcs_send_text_P(gcs_severity severity, const prog_char_t *str)
+void Copter::gcs_send_text(MAV_SEVERITY severity, const char *str)
 {
-    for (uint8_t i=0; i<num_gcs; i++) {
-        if (gcs[i].initialised) {
-            gcs[i].send_text_P(severity, str);
-        }
-    }
+    GCS_MAVLINK::send_statustext(severity, 0xFF, str);
 }
 
 /*
@@ -1815,19 +2117,26 @@ void Copter::gcs_send_text_P(gcs_severity severity, const prog_char_t *str)
  *  only one fits in the queue, so if you send more than one before the
  *  last one gets into the serial buffer then the old one will be lost
  */
-void Copter::gcs_send_text_fmt(const prog_char_t *fmt, ...)
+void Copter::gcs_send_text_fmt(MAV_SEVERITY severity, const char *fmt, ...)
 {
+    char str[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN] {};
     va_list arg_list;
-    gcs[0].pending_status.severity = (uint8_t)SEVERITY_LOW;
     va_start(arg_list, fmt);
-    hal.util->vsnprintf_P((char *)gcs[0].pending_status.text,
-            sizeof(gcs[0].pending_status.text), fmt, arg_list);
     va_end(arg_list);
-    gcs[0].send_message(MSG_STATUSTEXT);
-    for (uint8_t i=1; i<num_gcs; i++) {
-        if (gcs[i].initialised) {
-            gcs[i].pending_status = gcs[0].pending_status;
-            gcs[i].send_message(MSG_STATUSTEXT);
-        }
+    hal.util->vsnprintf((char *)str, sizeof(str), fmt, arg_list);
+    GCS_MAVLINK::send_statustext(severity, 0xFF, str);
+}
+
+/*
+  return true if we will accept this packet. Used to implement SYSID_ENFORCE
+ */
+bool GCS_MAVLINK_Copter::accept_packet(const mavlink_status_t &status, mavlink_message_t &msg)
+{
+    if (!copter.g2.sysid_enforce) {
+        return true;
     }
+    if (msg.msgid == MAVLINK_MSG_ID_RADIO || msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS) {
+        return true;
+    }
+    return (msg.sysid == copter.g.sysid_my_gcs);
 }

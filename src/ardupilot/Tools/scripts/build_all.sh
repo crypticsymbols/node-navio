@@ -8,9 +8,12 @@
 set -e
 set -x
 
+export BUILDROOT="/tmp/all.build"
+rm -rf $BUILDROOT
+
 echo "Testing ArduPlane build"
 pushd ArduPlane
-for b in all apm2 sitl linux; do
+for b in sitl linux; do
     pwd
     make clean
     make $b -j4
@@ -28,7 +31,7 @@ popd
 
 echo "Testing APMRover build"
 pushd APMrover2
-for b in all apm2 sitl linux; do
+for b in sitl linux; do
     pwd
     make clean
     make $b -j4
@@ -37,38 +40,16 @@ popd
 
 echo "Testing AntennaTracker build"
 pushd AntennaTracker
-for b in apm2 sitl; do
+for b in sitl; do
     pwd
     make clean
     make $b -j4
 done
 popd
 
-echo "Testing build of examples"
-
-examples="Tools/CPUInfo"
-for d in $examples; do
-    pushd $d
-    make clean
-    make apm2 -j4
-    make clean
-    make sitl -j4
-    popd
-done
-
-test -d ../libmaple && {
-echo "Testing flymaple build"
-for d in ArduPlane APMrover2; do
-    pushd $d
-    make clean
-    make flymaple -j4
-    popd
-done
-}
-
 pushd Tools/Replay
 make clean
-make linux -j4
+make
 popd
 
 test -n "$PX4_ROOT" && test -d "$PX4_ROOT" && {

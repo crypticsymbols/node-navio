@@ -1,4 +1,3 @@
-/// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,7 +19,7 @@
  */
 
 
-#include <AP_HAL.h>
+#include <AP_HAL/AP_HAL.h>
 #include "AP_Compass_HIL.h"
 
 extern const AP_HAL::HAL& hal;
@@ -37,12 +36,12 @@ AP_Compass_HIL::AP_Compass_HIL(Compass &compass):
 AP_Compass_Backend *AP_Compass_HIL::detect(Compass &compass)
 {
     AP_Compass_HIL *sensor = new AP_Compass_HIL(compass);
-    if (sensor == NULL) {
-        return NULL;
+    if (sensor == nullptr) {
+        return nullptr;
     }
     if (!sensor->init()) {
         delete sensor;
-        return NULL;
+        return nullptr;
     }
     return sensor;
 }
@@ -59,9 +58,16 @@ AP_Compass_HIL::init(void)
 
 void AP_Compass_HIL::read()
 {
-    for (uint8_t i=0; i<sizeof(_compass_instance)/sizeof(_compass_instance[0]); i++) {
+    for (uint8_t i=0; i < ARRAY_SIZE(_compass_instance); i++) {
         if (_compass._hil.healthy[i]) {
-            publish_field(_compass._hil.field[_compass_instance[i]], _compass_instance[i]);
+            uint8_t compass_instance = _compass_instance[i];
+            Vector3f field = _compass._hil.field[compass_instance];
+            rotate_field(field, compass_instance);
+            publish_raw_field(field, AP_HAL::micros(), compass_instance);
+            correct_field(field, compass_instance);
+            uint32_t saved_last_update = _compass.last_update_usec(compass_instance);
+            publish_filtered_field(field, compass_instance);
+            set_last_update_usec(saved_last_update, compass_instance);
         }
     }
 }

@@ -1,6 +1,4 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
-
-#include <AP_Mount_Servo.h>
+#include "AP_Mount_Servo.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -30,7 +28,7 @@ void AP_Mount_Servo::update()
     static bool mount_open = 0;     // 0 is closed
 
     // check servo map every three seconds to allow users to modify parameters
-    uint32_t now = hal.scheduler->millis();
+    uint32_t now = AP_HAL::millis();
     if (now - _last_check_servo_map_ms > 3000) {
         check_servo_map();
         _last_check_servo_map_ms = now;
@@ -72,7 +70,7 @@ void AP_Mount_Servo::update()
         case MAV_MOUNT_MODE_GPS_POINT:
         {
             if(_frontend._ahrs.get_gps().status() >= AP_GPS::GPS_OK_FIX_2D) {
-                calc_angle_to_location(_state._roi_target, _angle_ef_target_rad, _flags.tilt_control, _flags.pan_control);
+                calc_angle_to_location(_state._roi_target, _angle_ef_target_rad, _flags.tilt_control, _flags.pan_control, false);
                 stabilize();
             }
             break;
@@ -130,7 +128,7 @@ void AP_Mount_Servo::stabilize()
         Matrix3f m;                         ///< holds 3 x 3 matrix, var is used as temp in calcs
         Matrix3f cam;                       ///< Rotation matrix earth to camera. Desired camera from input.
         Matrix3f gimbal_target;             ///< Rotation matrix from plane to camera. Then Euler angles to the servos.
-        m = _frontend._ahrs.get_dcm_matrix();
+        m = _frontend._ahrs.get_rotation_body_to_ned();
         m.transpose();
         cam.from_euler(_angle_ef_target_rad.x, _angle_ef_target_rad.y, _angle_ef_target_rad.z);
         gimbal_target = m * cam;
@@ -154,7 +152,7 @@ void AP_Mount_Servo::stabilize()
         // lead filter
         const Vector3f &gyro = _frontend._ahrs.get_gyro();
 
-        if (_state._stab_roll && !is_zero(_state._roll_stb_lead) && fabsf(_frontend._ahrs.pitch) < M_PI_F/3.0f) {
+        if (_state._stab_roll && !is_zero(_state._roll_stb_lead) && fabsf(_frontend._ahrs.pitch) < M_PI/3.0f) {
             // Compute rate of change of euler roll angle
             float roll_rate = gyro.x + (_frontend._ahrs.sin_pitch() / _frontend._ahrs.cos_pitch()) * (gyro.y * _frontend._ahrs.sin_roll() + gyro.z * _frontend._ahrs.cos_roll());
             _angle_bf_output_deg.x -= degrees(roll_rate) * _state._roll_stb_lead;
@@ -180,8 +178,6 @@ int16_t AP_Mount_Servo::closest_limit(int16_t angle, int16_t angle_min, int16_t 
     while (angle_min >= 1800) angle_min -= 3600;
     while (angle_max < -1800) angle_max += 3600;
     while (angle_max >= 1800) angle_max -= 3600;
-    // TODO call this function somehow, otherwise this will never work
-    //set_range(min, max);
 
     // If the angle is outside servo limits, saturate the angle to the closest limit
     // On a circle the closest angular position must be carefully calculated to account for wrap-around

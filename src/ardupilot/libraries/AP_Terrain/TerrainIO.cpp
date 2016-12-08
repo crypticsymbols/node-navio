@@ -1,4 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,11 +16,11 @@
   handle disk IO for terrain code
  */
 
-#include <AP_HAL.h>
-#include <AP_Common.h>
-#include <AP_Math.h>
-#include <GCS_MAVLink.h>
-#include <GCS.h>
+#include <AP_HAL/AP_HAL.h>
+#include <AP_Common/AP_Common.h>
+#include <AP_Math/AP_Math.h>
+#include <GCS_MAVLink/GCS_MAVLink.h>
+#include <GCS_MAVLink/GCS.h>
 #include "AP_Terrain.h"
 
 #if AP_TERRAIN_AVAILABLE
@@ -41,7 +40,7 @@ extern const AP_HAL::HAL& hal;
  */
 void AP_Terrain::check_disk_read(void)
 {
-    for (uint16_t i=0; i<TERRAIN_GRID_BLOCK_CACHE_SIZE; i++) {
+    for (uint16_t i=0; i<cache_size; i++) {
         if (cache[i].state == GRID_CACHE_DISKWAIT) {
             disk_block.block = cache[i].grid;
             disk_io_state = DiskIoWaitRead;
@@ -55,7 +54,7 @@ void AP_Terrain::check_disk_read(void)
  */
 void AP_Terrain::check_disk_write(void)
 {
-    for (uint16_t i=0; i<TERRAIN_GRID_BLOCK_CACHE_SIZE; i++) {
+    for (uint16_t i=0; i<cache_size; i++) {
         if (cache[i].state == GRID_CACHE_DIRTY) {
             disk_block.block = cache[i].grid;
             disk_io_state = DiskIoWaitWrite;
@@ -69,7 +68,7 @@ void AP_Terrain::check_disk_write(void)
  */
 void AP_Terrain::schedule_disk_io(void)
 {
-    if (enable == 0) {
+    if (enable == 0 || !allocate()) {
         return;
     }
 
@@ -97,7 +96,7 @@ void AP_Terrain::schedule_disk_io(void)
                 cache[cache_idx].grid = disk_block.block;
             }
             cache[cache_idx].state = GRID_CACHE_VALID;
-            cache[cache_idx].last_access_ms = hal.scheduler->millis();
+            cache[cache_idx].last_access_ms = AP_HAL::millis();
         }
         disk_io_state = DiskIoIdle;
         break;
@@ -150,18 +149,18 @@ void AP_Terrain::open_file(void)
         // already open on right file
         return;
     }
-    if (file_path == NULL) {
+    if (file_path == nullptr) {
         const char* terrain_dir = hal.util->get_custom_terrain_directory();
-        if (terrain_dir == NULL) {
+        if (terrain_dir == nullptr) {
             terrain_dir = HAL_BOARD_TERRAIN_DIRECTORY;
         }
         if (asprintf(&file_path, "%s/NxxExxx.DAT", terrain_dir) <= 0) {
             io_failure = true;
-            file_path = NULL;
+            file_path = nullptr;
             return;
         }
     }
-    if (file_path == NULL) {
+    if (file_path == nullptr) {
         io_failure = true;
         return;
     }
@@ -187,7 +186,7 @@ void AP_Terrain::open_file(void)
     if (fd != -1) {
         ::close(fd);
     }
-    fd = ::open(file_path, O_RDWR|O_CREAT, 0644);
+    fd = ::open(file_path, O_RDWR|O_CREAT|O_CLOEXEC, 0644);
     if (fd == -1) {
 #if TERRAIN_DEBUG
         hal.console->printf("Open %s failed - %s\n",

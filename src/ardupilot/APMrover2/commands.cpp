@@ -1,5 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
-
 #include "Rover.h"
 
 /* Functions in this file:
@@ -30,7 +28,7 @@ void Rover::set_next_WP(const struct Location& loc)
     // location as the previous waypoint, to prevent immediately
     // considering the waypoint complete
     if (location_passed_point(current_loc, prev_WP, next_WP)) {
-        gcs_send_text_P(SEVERITY_LOW, PSTR("Resetting prev_WP"));
+        gcs_send_text(MAV_SEVERITY_NOTICE, "Resetting previous WP");
         prev_WP = current_loc;
     }
 
@@ -63,11 +61,12 @@ void Rover::init_home()
         return;
     }
 
-	gcs_send_text_P(SEVERITY_LOW, PSTR("init home"));
+	gcs_send_text(MAV_SEVERITY_INFO, "Init HOME");
 
     ahrs.set_home(gps.location());
-	home_is_set = true;
+	home_is_set = HOME_SET_NOT_LOCKED;
 	Log_Write_Home_And_Origin();
+    GCS_MAVLINK::send_home_all(gps.location());
 
 	// Save Home to EEPROM
 	mission.write_home_to_storage();
@@ -86,4 +85,27 @@ void Rover::restart_nav()
     g.pidSpeedThrottle.reset_I();
     prev_WP = current_loc;
     mission.start_or_resume();
+}
+
+/*
+  update home location from GPS
+  this is called as long as we have 3D lock and the arming switch is
+  not pushed
+*/
+void Rover::update_home()
+{
+    if (home_is_set == HOME_SET_NOT_LOCKED) {
+        Location loc = gps.location();
+        Location origin;
+        // if an EKF origin is available then we leave home equal to
+        // the height of that origin. This ensures that our relative
+        // height calculations are using the same origin
+        if (ahrs.get_origin(origin)) {
+            loc.alt = origin.alt;
+        }
+        ahrs.set_home(loc);
+        Log_Write_Home_And_Origin();
+        GCS_MAVLINK::send_home_all(gps.location());
+    }
+    barometer.update_calibration();
 }
