@@ -9,8 +9,8 @@
           'direct_dependent_settings': {
             "cflags": [ "-fsigned-char", "-Wall", "-std=c++11" ],
             "cflags_cc": [ "-fsigned-char", "-Wall", "-std=c++11", '-O3', '-g' ],
-            "cflags!": [ '-fno-exceptions' ],
-            "cflags_cc!": [ '-fno-exceptions' ],
+            "cflags!": [ '-fno-exceptions', '-Wmissing-field-initializers' ],
+            "cflags_cc!": [ '-fno-exceptions', '-Wmissing-field-initializers' ],
             "defines": [
               "CONFIG_HAL_BOARD=7",
               "CONFIG_HAL_BOARD_SUBTYPE=1003",
@@ -47,8 +47,8 @@
           ],
           "cflags": [ "-fsigned-char", "-Wall", "-std=gnu++11" ],
           "cflags_cc": [ "-fsigned-char", "-Wall", "-std=gnu++11", '-O3', '-g' ],
-          "cflags!": [ '-fno-exceptions' ],
-          "cflags_cc!": [ '-fno-exceptions' ],
+          "cflags!": [ '-fno-exceptions', '-Wmissing-field-initializers' ],
+          "cflags_cc!": [ '-fno-exceptions', '-Wmissing-field-initializers' ],
           "include_dirs" : [
             "<!@(cd <(module_root_dir)/src/ardupilot && find libraries -type d -maxdepth 2)",
           ]
