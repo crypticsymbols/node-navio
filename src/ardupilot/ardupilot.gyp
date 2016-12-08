@@ -33,7 +33,7 @@
                 '-Wl,-rpath-link=\$(builddir)'
               ],
               'ldflags': [
-                "-L<!@(cd <(module_root_dir)/src/ardupilot && find built -type d)",
+                "<!@(cd <(module_root_dir)/src/ardupilot && find built -type d | awk '{print \"-L\"$0}')",
               ],
             },
           },
