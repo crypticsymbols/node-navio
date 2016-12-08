@@ -1,69 +1,174 @@
-#include <AP_RangeFinder.h>
-#include <AP_InertialSensor.h>
-#include <AP_Baro.h>
-#include <AP_GPS.h>
-#include <AP_AHRS.h>
-#include <AP_Compass.h>
-#include <AP_NavEKF.h>
-#include <AP_BattMonitor.h>
-#include <AP_SerialManager.h>
-#include <AP_AHRS_NavEKF.h>
 
-class AHRS {
-  public:
-    void setup () {
+//
+// Simple test for the AP_AHRS interface
+//
 
-      ins.init(AP_InertialSensor::COLD_START, 
-          AP_InertialSensor::RATE_100HZ);
-      ahrs.init();
-      serial_manager.init();
-      if( compass.init() ) {
+#include <AP_ADC/AP_ADC.h>
+#include <AP_AHRS/AP_AHRS.h>
+#include <AP_HAL/AP_HAL.h>
+#include <AP_BoardConfig/AP_BoardConfig.h>
+
+const AP_HAL::HAL& hal = AP_HAL::get_HAL();
+
+// INS and Baro declaration
+AP_InertialSensor ins;
+
+Compass compass;
+
+AP_GPS gps;
+AP_Baro barometer;
+AP_SerialManager serial_manager;
+
+class DummyVehicle {
+public:
+    RangeFinder sonar {serial_manager};
+    AP_AHRS_NavEKF ahrs{ins, barometer, gps, sonar, EKF, EKF2,
+                        AP_AHRS_NavEKF::FLAG_ALWAYS_USE_EKF};
+    NavEKF EKF{&ahrs, barometer, sonar};
+    NavEKF2 EKF2{&ahrs, barometer, sonar};
+};
+
+static DummyVehicle vehicle;
+
+// choose which AHRS system to use
+// AP_AHRS_DCM  ahrs(ins, baro, gps);
+AP_AHRS_NavEKF ahrs(vehicle.ahrs);
+
+
+#define HIGH 1
+#define LOW 0
+
+void setup(void)
+{
+    AP_BoardConfig{}.init();
+
+    ins.init(100);
+    ahrs.init();
+    serial_manager.init();
+
+    if( compass.init() ) {
+        hal.console->printf("Enabling compass\n");
         ahrs.set_compass(&compass);
-      // } else {
-        // ???
-      }
-      gps.init(NULL, serial_manager);
+    } else {
+        hal.console->printf("No compass detected\n");
+    }
+    gps.init(nullptr, serial_manager);
+}
 
-    };
 
-    struct Location current_loc;
+void getData(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval) {
 
-    float heading = 0;
-
-    void update() {
-
-      ahrs.update();
-      gps.update();
-
-      if (compass.read()) {
-        heading = compass.calculate_heading(ahrs.get_dcm_matrix());
-      }
-
-    };
-
-    void getData(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval) {
-
-      ahrs.get_position(current_loc);
-      Vector3f drift  = ahrs.get_gyro_drift();
+      // ahrs.get_position(current_loc);
+      // Vector3f drift  = ahrs.get_gyro_drift();
       outputCallback(ahrs.roll, ahrs.pitch, ahrs.yaw);
 
     };
 
-    RangeFinder rng;
+void update(void)
+{
+    static uint16_t counter;
+    static uint32_t last_t, last_print, last_compass;
+    uint32_t now = AP_HAL::micros();
+    float heading = 0;
 
-    AP_GPS gps;
+    if (last_t == 0) {
+        last_t = now;
+        return;
+    }
+    last_t = now;
 
-    AP_InertialSensor ins;
+    if (now - last_compass > 100*1000UL &&
+        compass.read()) {
+        heading = compass.calculate_heading(ahrs.get_rotation_body_to_ned());
+        // read compass at 10Hz
+        last_compass = now;
+    }
 
-    AP_Baro baro;
+    ahrs.update();
+    counter++;
 
-    Compass compass;
+    if (now - last_print >= 100000 /* 100ms : 10hz */) {
+        Vector3f drift  = ahrs.get_gyro_drift();
+        hal.console->printf(
+                "r:%4.1f  p:%4.1f y:%4.1f "
+                    "drift=(%5.1f %5.1f %5.1f) hdg=%.1f rate=%.1f\n",
+                        ToDeg(ahrs.roll),
+                        ToDeg(ahrs.pitch),
+                        ToDeg(ahrs.yaw),
+                        ToDeg(drift.x),
+                        ToDeg(drift.y),
+                        ToDeg(drift.z),
+                        compass.use_for_yaw() ? ToDeg(heading) : 0.0f,
+                        (1.0e6f*counter)/(now-last_print));
+        last_print = now;
+        counter = 0;
+    }
+}
 
-    AP_SerialManager serial_manager;
+AP_HAL_MAIN();
+// #include <AP_ADC/AP_ADC.h>
+// #include <AP_AHRS/AP_AHRS.h>
+// #include <AP_HAL/AP_HAL.h>
+// #include <AP_BoardConfig/AP_BoardConfig.h>
 
-    NavEKF EKF{&ahrs, baro, rng};
 
-    AP_AHRS_NavEKF ahrs{ins, baro, gps, rng, EKF};
+// const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
-};
+// class AHRS {
+  // public:
+    // void setup () {
+
+      // ins.init(AP_InertialSensor::COLD_START, 
+          // AP_InertialSensor::RATE_100HZ);
+      // ahrs.init();
+      // serial_manager.init();
+      // if( compass.init() ) {
+        // ahrs.set_compass(&compass);
+      // // } else {
+        // // ???
+      // }
+      // gps.init(NULL, serial_manager);
+
+    // };
+
+    // struct Location current_loc;
+
+    // float heading = 0;
+
+    // void update() {
+
+      // ahrs.update();
+      // gps.update();
+
+      // if (compass.read()) {
+        // heading = compass.calculate_heading(ahrs.get_dcm_matrix());
+      // }
+
+    // };
+
+    // void getData(std::function<void(float roll, float pitch, float yaw)> outputCallback, int callbackInterval) {
+
+      // ahrs.get_position(current_loc);
+      // Vector3f drift  = ahrs.get_gyro_drift();
+      // outputCallback(ahrs.roll, ahrs.pitch, ahrs.yaw);
+
+    // };
+
+    // RangeFinder rng;
+
+    // AP_GPS gps;
+
+    // AP_InertialSensor ins;
+
+    // AP_Baro baro;
+
+    // Compass compass;
+
+    // AP_SerialManager serial_manager;
+
+    // NavEKF EKF{&ahrs, baro, rng};
+
+    // AP_AHRS_NavEKF ahrs{ins, baro, gps, rng, EKF};
+
+// };
 
