@@ -38,7 +38,9 @@ AP_AHRS_NavEKF ahrs(vehicle.ahrs);
 #define HIGH 1
 #define LOW 0
 
-void setup(void)
+class AHRS {
+  public:
+  void setup(void)
 {
     AP_BoardConfig{}.init();
 
@@ -104,8 +106,8 @@ void update(void)
         counter = 0;
     }
 }
-
-AP_HAL_MAIN();
+};
+// AP_HAL_MAIN();
 // #include <AP_ADC/AP_ADC.h>
 // #include <AP_AHRS/AP_AHRS.h>
 // #include <AP_HAL/AP_HAL.h>
