@@ -30,10 +30,8 @@
             'link_settings': {
               'libraries': [
                 '-Wl,-rpath=\$$ORIGIN',
-                '-Wl,-rpath-link=\$(builddir)'
-              ],
-              'ldflags': [
-                "<!@(cd <(module_root_dir)/src/ardupilot && find built -type d | awk '{print \"-L\"$0}')",
+                '-Wl,-rpath-link=\$(builddir)',
+                '<(module_root_dir)/src/ardupilot/built/ArduCopter.elf',
               ],
             },
           },
