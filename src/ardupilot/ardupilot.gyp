@@ -25,7 +25,7 @@
               "-lrt"
             ],
             'include_dirs': [
-              "<!@(cd <(module_root_dir)/src/ardupilot && find libraries -type d -maxdepth 2)",
+              "<(module_root_dir)/src/ardupilot/libraries",
             ],
             'link_settings': {
               'libraries': [

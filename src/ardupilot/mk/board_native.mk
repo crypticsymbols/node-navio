@@ -128,7 +128,7 @@ else
 $(SKETCHELF): $(SKETCHOBJS) $(LIBOBJS)
 	@echo "Building $(SKETCHELF)"
 	$(RULEHDR)
-	$(v)$(LD) $(LDFLAGS) -o $@ $(SKETCHOBJS) $(LIBOBJS) $(LIBS)
+	$(v)$(LD) $(LDFLAGS) -shared -fPIC -o $@ $(SKETCHOBJS) $(LIBOBJS) $(LIBS)
 	$(v)cp $(SKETCHELF) .
 	@echo "Firmware is in $(BUILDELF)"
 endif

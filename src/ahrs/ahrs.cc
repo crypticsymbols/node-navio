@@ -3,10 +3,10 @@
 // Simple test for the AP_AHRS interface
 //
 
-#include <AP_ADC/AP_ADC.h>
-#include <AP_AHRS/AP_AHRS.h>
-#include <AP_HAL/AP_HAL.h>
-#include <AP_BoardConfig/AP_BoardConfig.h>
+#include <AP_ADC.h>
+#include <AP_AHRS.h>
+#include <AP_HAL.h>
+#include <AP_BoardConfig.h>
 
 const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
