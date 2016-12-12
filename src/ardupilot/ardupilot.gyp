@@ -31,7 +31,7 @@
               'libraries': [
                 '-Wl,-rpath=\$$ORIGIN',
                 '-Wl,-rpath-link=\$(builddir)',
-                '<(module_root_dir)/src/ardupilot/built/ArduCopter.elf',
+                "<!@(cd <(module_root_dir)/src/ardupilot && find built -type f -name *.o)"
               ],
             },
           },
