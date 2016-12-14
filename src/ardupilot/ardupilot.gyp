@@ -27,11 +27,13 @@
             'include_dirs': [
               "<(module_root_dir)/src/ardupilot/libraries",
             ],
+            'libraries' : [
+               '<(module_root_dir)/src/ardupilot/built/arducopter.so',
+            ],
             'link_settings': {
               'libraries': [
                 '-Wl,-rpath=\$$ORIGIN',
                 '-Wl,-rpath-link=\$(builddir)',
-                "<!@(cd <(module_root_dir)/src/ardupilot && find built -type f -name *.o)"
               ],
             },
           },
