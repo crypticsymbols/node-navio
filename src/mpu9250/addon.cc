@@ -54,7 +54,7 @@ class MPU9250_Interface : public StreamingWorker {
     }
   private:
     string name;
-    imu MPU9250;
+    MPU9250 imu;
 };
 
 StreamingWorker * create_worker(Callback *data
