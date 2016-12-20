@@ -69,7 +69,6 @@ class Ublox_Interface : public StreamingWorker {
                   gpsStatusType = "Reserved value. Current state unknown";
                   break;
         }
-        this->imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
         json sensorData;
         sensorData["sensor"] = name;
         sensorData["gpsClack"] = gpsClock;
