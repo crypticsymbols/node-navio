@@ -26,6 +26,10 @@ class MPU9250_Interface : public StreamingWorker {
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
+      float ax, ay, az;
+    float gx, gy, gz;
+    float mx, my, mz;
+    
       this->imu.initialize();
 
       int sendInterval = 10; // Interval results are sent in ms
@@ -50,9 +54,7 @@ class MPU9250_Interface : public StreamingWorker {
     }
   private:
     string name;
-    float ax, ay, az;
-    float gx, gy, gz;
-    float mx, my, mz;
+    
     MPU9250 imu;
 };
 
