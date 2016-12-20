@@ -12,7 +12,6 @@
         "include_dirs": [ 
           "<!(node -e \"require('nan')\")", 
           "<!(node -e \"require('streaming-worker-sdk')\")",
-          "<(module_root_dir)/src/Navio",
         ],
         "cflags": ["-Wall", "-std=c++11"],
         "cflags!": [ '-fno-exceptions' ],
