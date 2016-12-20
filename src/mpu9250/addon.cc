@@ -26,9 +26,9 @@ class MPU9250_Interface : public StreamingWorker {
 
     void Execute (const AsyncProgressWorker::ExecutionProgress& progress) {
 
-      float ax, ay, az = 0;
-    float gx, gy, gz = 0;
-    float mx, my, mz = 0;
+      float ax, ay, az;
+    float gx, gy, gz;
+    float mx, my, mz;
 
       this->imu.initialize();
 
@@ -39,15 +39,15 @@ class MPU9250_Interface : public StreamingWorker {
         this->imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
         json sensorData;
         sensorData["sensor"] = name;
-        sensorData["ax"] = &ax;
-        sensorData["ay"] = &ay;
-        sensorData["az"] = &az;
-        sensorData["gx"] = &gx;
-        sensorData["gy"] = &gy;
-        sensorData["gz"] = &gz;
-        sensorData["mx"] = &mx;
-        sensorData["my"] = &my;
-        sensorData["mz"] = &mz;
+        sensorData["ax"] = ax;
+        sensorData["ay"] = ay;
+        sensorData["az"] = az;
+        sensorData["gx"] = gx;
+        sensorData["gy"] = gy;
+        sensorData["gz"] = gz;
+        sensorData["mx"] = mx;
+        sensorData["my"] = my;
+        sensorData["mz"] = mz;
         Message message("imuData", sensorData.dump());
         writeToNode(progress, message);
       }
