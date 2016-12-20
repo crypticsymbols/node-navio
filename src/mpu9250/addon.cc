@@ -5,7 +5,7 @@
 #include <thread>
 #include "streaming-worker.h"
 #include "json.hpp" //https://github.com/nlohmann/json
-#include "MPU9250.cc" // Main AHRS class
+#include "MPU9250.h" // Main AHRS class
 
 using namespace std;
 using json = nlohmann::json;
