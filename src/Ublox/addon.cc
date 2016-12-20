@@ -92,7 +92,7 @@ class Ublox_Interface : public StreamingWorker {
     float gpsClock, lat, lng, altWGS84, altMSL, accuracyH, accuracyV;
     bool gpsHealthy;
     int gpsStatusCode;
-    const char gpsStatusName;
+    char *gpsStatusName;
     Ublox gps;
 };
 
