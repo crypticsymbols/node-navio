@@ -48,25 +48,25 @@ class Ublox_Interface : public StreamingWorker {
           gpsStatusCode = ((int)pos_data[0]);
           switch(gpsStatusCode){
               case 0x00:
-                  gpsStatusType = "no fix";
+                  gpsStatusName = "no fix";
                   break;
               case 0x01:
-                  gpsStatusType = "dead reckoning only";
+                  gpsStatusName = "dead reckoning only";
                   break;
               case 0x02:
-                  gpsStatusType = "2D-fix";
+                  gpsStatusName = "2D-fix";
                   break;
               case 0x03:
-                  gpsStatusType = "3D-fix";
+                  gpsStatusName = "3D-fix";
                   break;
               case 0x04:
-                  gpsStatusType = "GPS + dead reckoning combined";
+                  gpsStatusName = "GPS + dead reckoning combined";
                   break;
               case 0x05:
-                  gpsStatusType = "Time only fix";
+                  gpsStatusName = "Time only fix";
                   break;
               default:
-                  gpsStatusType = "Reserved value. Current state unknown";
+                  gpsStatusName = "Reserved value. Current state unknown";
                   break;
         }
         json sensorData;
