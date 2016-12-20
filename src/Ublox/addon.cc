@@ -68,6 +68,7 @@ class Ublox_Interface : public StreamingWorker {
               default:
                   gpsStatusName = "Reserved value. Current state unknown";
                   break;
+                }
         }
         json sensorData;
         sensorData["sensor"] = name;
