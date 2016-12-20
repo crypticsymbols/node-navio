@@ -5,7 +5,7 @@
       'type': 'none',
       'dependencies': [
         'src/mpu9250/mpu9250.gyp:*',
-        'src/mpu9250/Ublox.gyp:*',
+        'src/Ublox/Ublox.gyp:*',
       ],
     }
   ]
